@@ -1,10 +1,12 @@
 const express = require('express');
 const bookRoutes = require('./book.routes');
-const bookController = require('../controllers/book.controller');
+const categoryRoutes = require('./category.routes');
+const borrowRoutes = require('./borrow.routes');
 
 const router = express.Router();
 
 router.use('/books', bookRoutes);
-router.get('/categories', bookController.getCategories);
+router.use('/categories', categoryRoutes);
+router.use('/borrows', borrowRoutes);
 
 module.exports = router;
