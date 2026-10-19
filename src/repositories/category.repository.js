@@ -5,34 +5,31 @@ const findAll = async (keyword) => {
     const request = pool.request();
 
     let query = `
-        SELECT Name, Description
-        FROM Category
+        SELECT id, name, description
+        FROM dbo.categories
     `;
 
     if (keyword) {
-        request.input('Keyword', sql.NVarChar, `%${keyword}%`);
-
+        request.input('keyword', sql.NVarChar, `%${keyword}%`);
         query += `
-            WHERE Name LIKE @Keyword
-               OR Description LIKE @Keyword
+            WHERE name LIKE @keyword
+               OR description LIKE @keyword
         `;
     }
 
-    query += ' ORDER BY Name ASC';
-
+    query += ' ORDER BY name ASC';
     const result = await request.query(query);
     return result.recordset;
 };
 
 const findByName = async (name) => {
     const pool = await getPool();
-
     const result = await pool.request()
-        .input('Name', sql.NVarChar, name)
+        .input('name', sql.NVarChar, name)
         .query(`
-            SELECT Name, Description
-            FROM Category
-            WHERE Name = @Name
+            SELECT id, name, description
+            FROM dbo.categories
+            WHERE name = @name
         `);
 
     return result.recordset[0] || null;
@@ -40,14 +37,13 @@ const findByName = async (name) => {
 
 const create = async (name, description) => {
     const pool = await getPool();
-
     const result = await pool.request()
-        .input('Name', sql.NVarChar, name)
-        .input('Description', sql.NVarChar, description)
+        .input('name', sql.NVarChar, name)
+        .input('description', sql.NVarChar, description)
         .query(`
-            INSERT INTO Category (Name, Description)
-            OUTPUT INSERTED.Name, INSERTED.Description
-            VALUES (@Name, @Description)
+            INSERT INTO dbo.categories (name, description)
+            OUTPUT INSERTED.id, INSERTED.name, INSERTED.description
+            VALUES (@name, @description)
         `);
 
     return result.recordset[0];
@@ -55,17 +51,16 @@ const create = async (name, description) => {
 
 const update = async (oldName, newName, description) => {
     const pool = await getPool();
-
     const result = await pool.request()
-        .input('OldName', sql.NVarChar, oldName)
-        .input('NewName', sql.NVarChar, newName)
-        .input('Description', sql.NVarChar, description)
+        .input('oldName', sql.NVarChar, oldName)
+        .input('newName', sql.NVarChar, newName)
+        .input('description', sql.NVarChar, description)
         .query(`
-            UPDATE Category
-            SET Name = @NewName,
-                Description = @Description
-            OUTPUT INSERTED.Name, INSERTED.Description
-            WHERE Name = @OldName
+            UPDATE dbo.categories
+            SET name = @newName,
+                description = @description
+            OUTPUT INSERTED.id, INSERTED.name, INSERTED.description
+            WHERE name = @oldName
         `);
 
     return result.recordset[0] || null;
@@ -73,13 +68,13 @@ const update = async (oldName, newName, description) => {
 
 const isUsedByBooks = async (name) => {
     const pool = await getPool();
-
     const result = await pool.request()
-        .input('Name', sql.NVarChar, name)
+        .input('name', sql.NVarChar, name)
         .query(`
-            SELECT TOP 1 RecordID
-            FROM Thuoc
-            WHERE CategoryName = @Name
+            SELECT TOP 1 b.id
+            FROM dbo.books b
+            INNER JOIN dbo.categories c ON c.id = b.category_id
+            WHERE c.name = @name
         `);
 
     return result.recordset.length > 0;
@@ -87,12 +82,11 @@ const isUsedByBooks = async (name) => {
 
 const remove = async (name) => {
     const pool = await getPool();
-
     await pool.request()
-        .input('Name', sql.NVarChar, name)
+        .input('name', sql.NVarChar, name)
         .query(`
-            DELETE FROM Category
-            WHERE Name = @Name
+            DELETE FROM dbo.categories
+            WHERE name = @name
         `);
 };
 

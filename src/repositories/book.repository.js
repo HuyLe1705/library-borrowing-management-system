@@ -1,71 +1,43 @@
 const { getPool, sql } = require('../config/database');
 
 const bookRepository = {
-    // Lấy danh sách sách, tìm kiếm, lọc và phân trang
-    async findAll({
-        keyword,
-        category,
-        year,
-        page = 1,
-        size = 10,
-        sort,
-    }) {
+    // Lấy danh sách sách, tìm kiếm, lọc, phân trang kèm số lượng bản sao sẵn có
+    async findAll({ keyword, category, year, page = 1, size = 10, sort }) {
         const pool = await getPool();
         const request = pool.request();
-
         const conditions = [];
 
         if (keyword) {
             request.input('keyword', sql.NVarChar, `%${keyword}%`);
-
             conditions.push(`
                 (
-                    b.Title LIKE @keyword
-                    OR b.ISBN LIKE @keyword
-                    OR EXISTS (
-                        SELECT 1
-                        FROM dbo.Viet v
-                        INNER JOIN dbo.Author a
-                            ON a.SSN = v.AuthorID
-                        WHERE v.RecordID = b.RecordID
-                          AND a.Fullname LIKE @keyword
-                    )
+                    b.title LIKE @keyword
+                    OR b.isbn LIKE @keyword
+                    OR b.author LIKE @keyword
                 )
             `);
         }
 
         if (category) {
             request.input('category', sql.NVarChar, category);
-
-            conditions.push(`
-                EXISTS (
-                    SELECT 1
-                    FROM dbo.Thuoc t
-                    INNER JOIN dbo.Category c
-                        ON c.Name = t.CategoryName
-                    WHERE t.RecordID = b.RecordID
-                      AND c.Name = @category
-                )
-            `);
+            conditions.push(`c.name = @category`);
         }
 
         if (year !== undefined && year !== null && year !== '') {
             request.input('year', sql.Int, Number(year));
-            conditions.push('b.[Year] = @year');
+            conditions.push('b.publish_year = @year');
         }
 
         const whereClause = conditions.length
             ? `WHERE ${conditions.join(' AND ')}`
             : '';
 
-        // Chỉ cho phép các cột được chỉ định để tránh SQL injection.
         const sortColumns = {
-            title: 'b.Title',
-            year: 'b.[Year]',
-            author: 'Author',
+            title: 'b.title',
+            year: 'b.publish_year',
+            author: 'b.author',
         };
-
-        const sortColumn = sortColumns[sort] || 'b.Title';
+        const sortColumn = sortColumns[sort] || 'b.title';
 
         const safePage = Math.max(1, Number(page) || 1);
         const safeSize = Math.max(1, Number(size) || 10);
@@ -75,41 +47,29 @@ const bookRepository = {
 
         const result = await request.query(`
             SELECT
-                b.RecordID AS id,
-                b.Title AS title,
-                b.ISBN AS isbn,
-                b.Publisher AS publisher,
-                b.[Year] AS year,
-                b.Language AS language,
-                b.Description AS description,
-                b.CoverURL AS coverURL,
-
-                (
-                    SELECT STRING_AGG(a.Fullname, N', ')
-                    FROM dbo.Viet v
-                    INNER JOIN dbo.Author a
-                        ON a.SSN = v.AuthorID
-                    WHERE v.RecordID = b.RecordID
-                ) AS author,
-
-                (
-                    SELECT STRING_AGG(c.Name, N', ')
-                    FROM dbo.Thuoc t
-                    INNER JOIN dbo.Category c
-                        ON c.Name = t.CategoryName
-                    WHERE t.RecordID = b.RecordID
-                ) AS category
-
-            FROM dbo.BibliographicRecord b
-
+                b.id,
+                b.title,
+                b.isbn,
+                b.author,
+                b.category_id AS categoryId,
+                c.name AS category,
+                b.publisher,
+                b.publish_year AS [year],
+                b.language,
+                b.description,
+                b.cover_url AS coverURL,
+                (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id) AS totalCopies,
+                (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE') AS availableCopies
+            FROM dbo.books b
+            LEFT JOIN dbo.categories c ON c.id = b.category_id
             ${whereClause}
-
-            ORDER BY ${sortColumn} ASC, b.RecordID ASC
+            ORDER BY ${sortColumn} ASC, b.id ASC
             OFFSET @offset ROWS
             FETCH NEXT @size ROWS ONLY;
 
             SELECT COUNT(*) AS total
-            FROM dbo.BibliographicRecord b
+            FROM dbo.books b
+            LEFT JOIN dbo.categories c ON c.id = b.category_id
             ${whereClause};
         `);
 
@@ -119,295 +79,195 @@ const bookRepository = {
         };
     },
 
-    // Lấy chi tiết sách
+    // Lấy chi tiết đầu sách kèm danh sách các cuốn sách vật lý (Barcode & Vị trí kệ)
     async findById(id) {
         const pool = await getPool();
 
         const result = await pool.request()
-            .input('id', sql.VarChar, id)
+            .input('id', sql.Int, id)
             .query(`
                 SELECT
-                    b.RecordID AS id,
-                    b.Title AS title,
-                    b.RefBookID AS refBookId,
-                    b.ISBN AS isbn,
-                    b.Publisher AS publisher,
-                    b.[Year] AS year,
-                    b.Language AS language,
-                    b.Description AS description,
-                    b.CoverURL AS coverURL,
+                    b.id,
+                    b.title,
+                    b.isbn,
+                    b.author,
+                    b.category_id AS categoryId,
+                    c.name AS category,
+                    b.publisher,
+                    b.publish_year AS [year],
+                    b.language,
+                    b.description,
+                    b.cover_url AS coverURL
+                FROM dbo.books b
+                LEFT JOIN dbo.categories c ON c.id = b.category_id
+                WHERE b.id = @id;
 
-                    (
-                        SELECT STRING_AGG(a.Fullname, N', ')
-                        FROM dbo.Viet v
-                        INNER JOIN dbo.Author a
-                            ON a.SSN = v.AuthorID
-                        WHERE v.RecordID = b.RecordID
-                    ) AS author,
-
-                    (
-                        SELECT STRING_AGG(c.Name, N', ')
-                        FROM dbo.Thuoc t
-                        INNER JOIN dbo.Category c
-                            ON c.Name = t.CategoryName
-                        WHERE t.RecordID = b.RecordID
-                    ) AS category
-
-                FROM dbo.BibliographicRecord b
-                WHERE b.RecordID = @id;
+                SELECT
+                    id AS copyId,
+                    barcode,
+                    shelf_location AS shelfLocation,
+                    status,
+                    entry_date AS entryDate
+                FROM dbo.book_copies
+                WHERE book_id = @id
+                ORDER BY barcode ASC;
             `);
 
-        return result.recordset[0] || null;
+        const book = result.recordsets[0][0];
+        if (!book) return null;
+
+        const copies = result.recordsets[1] || [];
+        return {
+            ...book,
+            totalCopies: copies.length,
+            availableCopies: copies.filter((c) => c.status === 'AVAILABLE').length,
+            copies,
+        };
     },
 
-    // Tìm thể loại theo tên, do Category không có CategoryID
-    async findCategoryById(categoryName) {
+    // Tìm thể loại theo ID số nguyên (Khớp với book.service.js)
+    async findCategoryById(categoryId) {
         const pool = await getPool();
-
         const result = await pool.request()
-            .input('name', sql.NVarChar, categoryName)
+            .input('id', sql.Int, categoryId)
             .query(`
-                SELECT Name AS id, Name AS name
-                FROM dbo.Category
-                WHERE Name = @name;
+                SELECT id, name, description
+                FROM dbo.categories
+                WHERE id = @id;
             `);
 
         return result.recordset[0] || null;
     },
 
-    // Tạo sách và các liên kết tác giả/thể loại
+    // Tạo sách mới và tự động tạo bản sao vật lý (book_copies)
     async create(book) {
         const pool = await getPool();
         const transaction = new sql.Transaction(pool);
-
         await transaction.begin();
 
         try {
             const request = new sql.Request(transaction);
 
-            request.input('id', sql.VarChar, book.id);
             request.input('title', sql.NVarChar, book.title);
-            request.input('refBookId', sql.VarChar, book.refBookId || null);
             request.input('isbn', sql.VarChar, book.isbn || null);
+            request.input('author', sql.NVarChar, book.author || 'Chưa rõ');
+            request.input('categoryId', sql.Int, book.categoryId ? Number(book.categoryId) : null);
             request.input('publisher', sql.NVarChar, book.publisher || null);
             request.input('year', sql.Int, book.year ?? null);
-            request.input('language', sql.NVarChar, book.language || null);
+            request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
             request.input('description', sql.NVarChar, book.description || null);
             request.input('coverURL', sql.NVarChar, book.coverURL || null);
 
-            await request.query(`
-                INSERT INTO dbo.BibliographicRecord (
-                    RecordID,
-                    Title,
-                    RefBookID,
-                    ISBN,
-                    Publisher,
-                    [Year],
-                    Language,
-                    Description,
-                    CoverURL,
-                    CreatedAt,
-                    UpdatedAt
+            const insertBook = await request.query(`
+                INSERT INTO dbo.books (
+                    title, isbn, author, category_id, publisher,
+                    publish_year, language, description, cover_url
                 )
+                OUTPUT INSERTED.id
                 VALUES (
-                    @id,
-                    @title,
-                    @refBookId,
-                    @isbn,
-                    @publisher,
-                    @year,
-                    @language,
-                    @description,
-                    @coverURL,
-                    SYSDATETIME(),
-                    SYSDATETIME()
+                    @title, @isbn, @author, @categoryId, @publisher,
+                    @year, @language, @description, @coverURL
                 );
             `);
 
-            await this._replaceRelations(transaction, book.id, book);
+            const newBookId = insertBook.recordset[0].id;
 
-            await transaction.commit();
+            // Nếu truyền kèm mảng copies [{ barcode, shelfLocation }] thì thêm luôn vào book_copies
+            if (Array.isArray(book.copies) && book.copies.length > 0) {
+                for (const copy of book.copies) {
+                    const copyReq = new sql.Request(transaction);
+                    copyReq.input('bookId', sql.Int, newBookId);
+                    copyReq.input('barcode', sql.VarChar, copy.barcode);
+                    copyReq.input('shelfLocation', sql.NVarChar, copy.shelfLocation || 'Kệ Tổng hợp');
 
-            return await this.findById(book.id);
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
-    },
+                    await copyReq.query(`
+                        INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status)
+                        VALUES (@bookId, @barcode, @shelfLocation, 'AVAILABLE');
+                    `);
+                }
+            } else if (book.barcode) {
+                // Hỗ trợ tạo nhanh 1 bản sao nếu truyền trực tiếp book.barcode
+                const copyReq = new sql.Request(transaction);
+                copyReq.input('bookId', sql.Int, newBookId);
+                copyReq.input('barcode', sql.VarChar, book.barcode);
+                copyReq.input('shelfLocation', sql.NVarChar, book.shelfLocation || 'Kệ Tổng hợp');
 
-    // Cập nhật thông tin sách và các liên kết
-    async update(id, book) {
-        const pool = await getPool();
-        const transaction = new sql.Transaction(pool);
-
-        await transaction.begin();
-
-        try {
-            const request = new sql.Request(transaction);
-
-            request.input('id', sql.VarChar, id);
-            request.input('title', sql.NVarChar, book.title);
-            request.input('refBookId', sql.VarChar, book.refBookId || null);
-            request.input('isbn', sql.VarChar, book.isbn || null);
-            request.input('publisher', sql.NVarChar, book.publisher || null);
-            request.input('year', sql.Int, book.year ?? null);
-            request.input('language', sql.NVarChar, book.language || null);
-            request.input('description', sql.NVarChar, book.description || null);
-            request.input('coverURL', sql.NVarChar, book.coverURL || null);
-
-            const result = await request.query(`
-                UPDATE dbo.BibliographicRecord
-                SET
-                    Title = @title,
-                    RefBookID = @refBookId,
-                    ISBN = @isbn,
-                    Publisher = @publisher,
-                    [Year] = @year,
-                    Language = @language,
-                    Description = @description,
-                    CoverURL = @coverURL,
-                    UpdatedAt = SYSDATETIME()
-                WHERE RecordID = @id;
-
-                SELECT @@ROWCOUNT AS affectedRows;
-            `);
-
-            if (result.recordset[0].affectedRows === 0) {
-                await transaction.rollback();
-                return null;
+                await copyReq.query(`
+                    INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status)
+                    VALUES (@bookId, @barcode, @shelfLocation, 'AVAILABLE');
+                `);
             }
 
-            await this._replaceRelations(transaction, id, book);
-
             await transaction.commit();
-
-            return await this.findById(id);
+            return await this.findById(newBookId);
         } catch (error) {
             await transaction.rollback();
             throw error;
         }
     },
 
-    // Thay thế các liên kết tác giả và thể loại của một cuốn sách.
-    // book.authorIds: mảng AuthorID.
-    // book.categories: mảng tên thể loại.
-    async _replaceRelations(transaction, recordId, book) {
-        const authorIds = Array.isArray(book.authorIds)
-            ? book.authorIds
-            : [];
+    // Cập nhật thông tin sách
+    async update(id, book) {
+        const pool = await getPool();
+        const request = pool.request();
 
-        const categories = Array.isArray(book.categories)
-            ? book.categories
-            : [];
+        request.input('id', sql.Int, id);
+        request.input('title', sql.NVarChar, book.title);
+        request.input('isbn', sql.VarChar, book.isbn || null);
+        request.input('author', sql.NVarChar, book.author || 'Chưa rõ');
+        request.input('categoryId', sql.Int, book.categoryId ? Number(book.categoryId) : null);
+        request.input('publisher', sql.NVarChar, book.publisher || null);
+        request.input('year', sql.Int, book.year ?? null);
+        request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
+        request.input('description', sql.NVarChar, book.description || null);
+        request.input('coverURL', sql.NVarChar, book.coverURL || null);
 
-        const deleteRequest = new sql.Request(transaction);
-        deleteRequest.input('recordId', sql.VarChar, recordId);
+        const result = await request.query(`
+            UPDATE dbo.books
+            SET
+                title = @title,
+                isbn = @isbn,
+                author = @author,
+                category_id = @categoryId,
+                publisher = @publisher,
+                publish_year = @year,
+                language = @language,
+                description = @description,
+                cover_url = @coverURL,
+                updated_at = SYSDATETIME()
+            WHERE id = @id;
 
-        await deleteRequest.query(`
-            DELETE FROM dbo.Viet
-            WHERE RecordID = @recordId;
-
-            DELETE FROM dbo.Thuoc
-            WHERE RecordID = @recordId;
+            SELECT @@ROWCOUNT AS affectedRows;
         `);
 
-        for (const authorId of authorIds) {
-            const request = new sql.Request(transaction);
-
-            request.input('recordId', sql.VarChar, recordId);
-            request.input('authorId', sql.VarChar, authorId);
-
-            await request.query(`
-                IF NOT EXISTS (
-                    SELECT 1
-                    FROM dbo.Author
-                    WHERE SSN = @authorId
-                )
-                BEGIN
-                    THROW 50001, 'Author does not exist.', 1;
-                END;
-
-                INSERT INTO dbo.Viet (AuthorID, RecordID)
-                VALUES (@authorId, @recordId);
-            `);
+        if (result.recordset[0].affectedRows === 0) {
+            return null;
         }
 
-        for (const categoryName of categories) {
-            const request = new sql.Request(transaction);
-
-            request.input('recordId', sql.VarChar, recordId);
-            request.input('categoryName', sql.NVarChar, categoryName);
-
-            await request.query(`
-                IF NOT EXISTS (
-                    SELECT 1
-                    FROM dbo.Category
-                    WHERE Name = @categoryName
-                )
-                BEGIN
-                    THROW 50002, 'Category does not exist.', 1;
-                END;
-
-                INSERT INTO dbo.Thuoc (CategoryName, RecordID)
-                VALUES (@categoryName, @recordId);
-            `);
-        }
+        return await this.findById(id);
     },
 
     // Xóa sách
     async delete(id) {
         const pool = await getPool();
-        const transaction = new sql.Transaction(pool);
-
-        await transaction.begin();
-
-        try {
-            const request = new sql.Request(transaction);
-            request.input('id', sql.VarChar, id);
-
-            const existing = await request.query(`
-                SELECT RecordID
-                FROM dbo.BibliographicRecord
-                WHERE RecordID = @id;
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .query(`
+                DELETE FROM dbo.books
+                OUTPUT DELETED.id AS id
+                WHERE id = @id;
             `);
 
-            if (existing.recordset.length === 0) {
-                await transaction.rollback();
-                return null;
-            }
-
-            // Xóa liên kết trước khi xóa bản ghi sách.
-            await request.query(`
-                DELETE FROM dbo.Viet WHERE RecordID = @id;
-                DELETE FROM dbo.Thuoc WHERE RecordID = @id;
-            `);
-
-            const result = await request.query(`
-                DELETE FROM dbo.BibliographicRecord
-                OUTPUT DELETED.RecordID AS id
-                WHERE RecordID = @id;
-            `);
-
-            await transaction.commit();
-
-            return result.recordset[0] || null;
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
+        return result.recordset[0] || null;
     },
 
     // Lấy danh sách thể loại
     async findCategories() {
         const pool = await getPool();
-
         const result = await pool.request().query(`
-            SELECT
-                Name AS id,
-                Name AS name,
-                Description AS description
-            FROM dbo.Category
-            ORDER BY Name;
+            SELECT id, name, description
+            FROM dbo.categories
+            ORDER BY name ASC;
         `);
 
         return result.recordset;
