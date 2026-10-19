@@ -78,7 +78,40 @@ const bookRepository = {
             total: result.recordsets[1][0].total,
         };
     },
+    
+    async checkBookDeleteConstraints(id) {
+        const pool = await getPool();
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .query(`
+                SELECT
+                    (SELECT COUNT(*) FROM dbo.book_copies WHERE book_id = @id AND status = 'BORROWED') AS activeBorrowedCopies,
+                    (SELECT COUNT(*) FROM dbo.borrow_records br
+                     INNER JOIN dbo.book_copies bc ON bc.id = br.copy_id
+                     WHERE bc.book_id = @id AND br.status IN ('BORROWED', 'OVERDUE')) AS activeLoans,
+                    (SELECT COUNT(*) FROM dbo.borrow_records br
+                     INNER JOIN dbo.book_copies bc ON bc.id = br.copy_id
+                     WHERE bc.book_id = @id) AS totalLoanHistory;
+            `);
 
+        return result.recordset[0];
+    },
+
+    // Kiểm tra trùng ISBN (Chặn Case 6)
+    async findByIsbn(isbn, excludeId = null) {
+        if (!isbn) return null;
+        const pool = await getPool();
+        const request = pool.request().input('isbn', sql.VarChar, isbn);
+
+        let query = `SELECT id, isbn FROM dbo.books WHERE isbn = @isbn`;
+        if (excludeId) {
+            request.input('excludeId', sql.Int, excludeId);
+            query += ` AND id <> @excludeId`;
+        }
+
+        const result = await request.query(query);
+        return result.recordset[0] || null;
+    },
     // Lấy chi tiết đầu sách kèm danh sách các cuốn sách vật lý (Barcode & Vị trí kệ)
     async findById(id) {
         const pool = await getPool();
