@@ -111,11 +111,15 @@ const bookService = {
     async createBook(book) {
         validateBook(book);
 
-        if (book.categoryId) {
-            const category = await bookRepository.findCategoryById(
-                Number(book.categoryId)
-            );
+        if (book.isbn && book.isbn.trim()) {
+            const existingIsbn = await bookRepository.findByIsbn(book.isbn.trim());
+            if (existingIsbn) {
+                throw new HttpError(409, 'Mã ISBN này đã tồn tại trong hệ thống.');
+            }
+        }
 
+        if (book.categoryId) {
+            const category = await bookRepository.findCategoryById(Number(book.categoryId));
             if (!category) {
                 throw new HttpError(400, 'Thể loại không tồn tại.');
             }
@@ -124,6 +128,7 @@ const bookService = {
         return bookRepository.create({
             ...book,
             title: book.title.trim(),
+            isbn: book.isbn?.trim() || null,
         });
     },
 
@@ -131,11 +136,15 @@ const bookService = {
         const id = parseId(value);
         validateBook(book);
 
-        if (book.categoryId) {
-            const category = await bookRepository.findCategoryById(
-                Number(book.categoryId)
-            );
+        if (book.isbn && book.isbn.trim()) {
+            const existingIsbn = await bookRepository.findByIsbn(book.isbn.trim(), id);
+            if (existingIsbn) {
+                throw new HttpError(409, 'Mã ISBN này đã được sử dụng cho một cuốn sách khác.');
+            }
+        }
 
+        if (book.categoryId) {
+            const category = await bookRepository.findCategoryById(Number(book.categoryId));
             if (!category) {
                 throw new HttpError(400, 'Thể loại không tồn tại.');
             }
@@ -144,6 +153,7 @@ const bookService = {
         const updatedBook = await bookRepository.update(id, {
             ...book,
             title: book.title.trim(),
+            isbn: book.isbn?.trim() || null,
         });
 
         if (!updatedBook) {
@@ -155,13 +165,31 @@ const bookService = {
 
     async deleteBook(value) {
         const id = parseId(value);
-        const deletedBook = await bookRepository.delete(id);
 
-        if (!deletedBook) {
+        // Kiểm tra sách có tồn tại không
+        const existingBook = await bookRepository.findById(id);
+        if (!existingBook) {
             throw new HttpError(404, 'Không tìm thấy sách để xóa.');
         }
 
-        return deletedBook;
+        // Chặn xóa nếu sách đang được mượn hoặc đã có lịch sử giao dịch
+        const constraints = await bookRepository.checkBookDeleteConstraints(id);
+
+        if (constraints.activeBorrowedCopies > 0 || constraints.activeLoans > 0) {
+            throw new HttpError(
+                409,
+                'Không thể xóa sách này vì đang có bản sao được độc giả mượn hoặc quá hạn chưa trả.'
+            );
+        }
+
+        if (constraints.totalLoanHistory > 0) {
+            throw new HttpError(
+                409,
+                'Không thể xóa sách đã phát sinh lịch sử giao dịch mượn/trả để đảm bảo toàn vẹn dữ liệu.'
+            );
+        }
+
+        return await bookRepository.delete(id);
     },
 
     async getCategories() {

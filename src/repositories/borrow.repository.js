@@ -139,6 +139,20 @@ const borrowRepository = {
                 throw new HttpError(409, `Bản sao sách hiện không sẵn sàng cho mượn (Trạng thái: ${copy.status}).`);
             }
 
+            // Chặn 1 độc giả mượn 2 bản sao của cùng 1 đầu sách cùng lúc
+            req.input('bookId', sql.Int, copy.book_id);
+            const duplicateBookCheck = await req.query(`
+                SELECT COUNT(*) AS sameBookCount
+                FROM dbo.borrow_records br
+                INNER JOIN dbo.book_copies bc ON bc.id = br.copy_id
+                WHERE br.borrower_id = @borrowerId
+                  AND bc.book_id = @bookId
+                  AND br.status IN ('BORROWED', 'OVERDUE');
+            `);
+            if (duplicateBookCheck.recordset[0].sameBookCount > 0) {
+                throw new HttpError(409, 'Độc giả hiện đang mượn một bản sao khác của cùng đầu sách này.');
+            }
+
             // 5. Lấy ID Thủ thư xử lý
             const libRes = await req.query(`
                 SELECT id FROM dbo.users WHERE user_code = @librarianCode;
@@ -268,18 +282,30 @@ const borrowRepository = {
 
         const recordRes = await request.query(`
             SELECT
-                id,
-                due_date AS dueDate,
-                renewal_count AS renewalCount,
-                status,
-                DATEDIFF(DAY, due_date, CAST(SYSDATETIME() AS DATE)) AS overdueDays
-            FROM dbo.borrow_records
-            WHERE id = @id;
+                br.id,
+                br.borrower_id AS borrowerId,
+                br.due_date AS dueDate,
+                br.renewal_count AS renewalCount,
+                br.status,
+                u.status AS userStatus,
+                DATEDIFF(DAY, br.due_date, CAST(SYSDATETIME() AS DATE)) AS overdueDays,
+                (SELECT COUNT(*) FROM dbo.fines f
+                 INNER JOIN dbo.borrow_records br2 ON br2.id = f.borrow_record_id
+                 WHERE br2.borrower_id = br.borrower_id AND f.status = 'UNPAID') AS unpaidFines,
+                (SELECT COUNT(*) FROM dbo.borrow_records br3
+                 WHERE br3.borrower_id = br.borrower_id
+                   AND (br3.status = 'OVERDUE' OR (br3.status = 'BORROWED' AND br3.due_date < CAST(SYSDATETIME() AS DATE)))) AS anyOverdue
+            FROM dbo.borrow_records br
+            INNER JOIN dbo.users u ON u.id = br.borrower_id
+            WHERE br.id = @id;
         `);
 
         const record = recordRes.recordset[0];
         if (!record) {
             throw new HttpError(404, 'Không tìm thấy phiếu mượn.');
+        }
+        if (record.userStatus === 'LOCKED' || record.unpaidFines > 0 || record.anyOverdue > 0) {
+            throw new HttpError(403, 'Không thể gia hạn vì độc giả đang bị khóa thẻ, có sách quá hạn hoặc nợ tiền phạt chưa đóng.');
         }
         if (record.status !== 'BORROWED' || record.overdueDays > 0) {
             throw new HttpError(400, 'Chỉ có thể gia hạn sách đang mượn và chưa bị quá hạn.');
@@ -331,12 +357,18 @@ const borrowRepository = {
                 SET status = 'PAID', paid_at = SYSDATETIME()
                 WHERE id = @fineId;
 
-                -- Mở khóa thẻ nếu độc giả không còn khoản phạt UNPAID nào khác
+                -- Chỉ mở khóa thẻ nếu độc giả hết khoản phạt UNPAID VÀ không còn giữ cuốn sách nào đang OVERDUE
                 IF NOT EXISTS (
                     SELECT 1
                     FROM dbo.fines f2
                     INNER JOIN dbo.borrow_records br2 ON br2.id = f2.borrow_record_id
                     WHERE br2.borrower_id = @borrowerId AND f2.status = 'UNPAID'
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM dbo.borrow_records br3
+                    WHERE br3.borrower_id = @borrowerId
+                      AND (br3.status = 'OVERDUE' OR (br3.status = 'BORROWED' AND br3.due_date < CAST(SYSDATETIME() AS DATE)))
                 )
                 BEGIN
                     UPDATE dbo.users SET status = 'ACTIVE' WHERE id = @borrowerId;
