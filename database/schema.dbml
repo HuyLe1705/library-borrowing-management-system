@@ -1,0 +1,83 @@
+// ====================================================================
+// Database Markup Language (DBML) cho Hệ thống Quản lý Mượn trả Sách
+// Công cụ trực quan hóa: https://dbdiagram.io
+// ====================================================================
+
+Table users {
+  id int [pk, increment, note: 'ID tự động tăng (IDENTITY), không truyền tham số']
+  user_code varchar(20) [unique, not null, note: 'MSSV / Mã GV / Mã Thủ thư']
+  username varchar(50) [unique, not null]
+  password_hash varchar(255) [not null]
+  full_name nvarchar(100) [not null]
+  email varchar(100) [unique, not null]
+  phone varchar(15)
+  role varchar(20) [not null, note: 'STUDENT, LECTURER, LIBRARIAN, ADMIN']
+  status varchar(20) [not null, default: 'ACTIVE', note: 'ACTIVE, LOCKED']
+  created_at timestamp [default: `now()`]
+}
+
+Table categories {
+  id int [pk, increment, note: 'ID tự động tăng']
+  name nvarchar(100) [unique, not null]
+  description nvarchar(255)
+}
+
+Table books {
+  id int [pk, increment, note: 'ID tự động tăng (IDENTITY), không truyền tham số khi tạo mới']
+  isbn varchar(20) [unique]
+  title nvarchar(255) [not null]
+  author nvarchar(200) [not null, default: 'Chưa rõ']
+  category_id int [note: 'FK liên kết bảng categories (hoặc category varchar(100))']
+  publisher nvarchar(150)
+  publish_year int
+  language nvarchar(50) [default: 'Tiếng Việt']
+  description text
+  cover_url varchar(500) [note: 'URL ảnh bìa sách trực tuyến để render trên UI']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table book_copies {
+  id int [pk, increment, note: 'ID tự động tăng']
+  book_id int [not null]
+  barcode varchar(50) [unique, not null]
+  shelf_location nvarchar(100) [not null, default: 'Kệ Tổng hợp']
+  status varchar(20) [not null, default: 'AVAILABLE', note: 'AVAILABLE, BORROWED, LOST, MAINTENANCE']
+  entry_date date [default: `now()`]
+}
+
+Table borrow_records {
+  id int [pk, increment, note: 'ID tự động tăng']
+  copy_id int [not null]
+  borrower_id int [not null]
+  librarian_id int [not null]
+  borrow_date date [not null, default: `now()`]
+  due_date date [not null]
+  return_date date
+  renewal_count int [not null, default: 0]
+  status varchar(20) [not null, default: 'BORROWED', note: 'BORROWED, RETURNED, OVERDUE']
+  created_at timestamp [default: `now()`]
+}
+
+Table fines {
+  id int [pk, increment, note: 'ID tự động tăng']
+  borrow_record_id int [unique, not null]
+  librarian_id int [not null]
+  overdue_days int [not null]
+  amount decimal(10,2) [not null]
+  reason nvarchar(255) [default: 'Trả sách quá hạn']
+  status varchar(20) [not null, default: 'UNPAID', note: 'UNPAID, PAID']
+  created_at timestamp [default: `now()`]
+  paid_at timestamp
+}
+
+// ====================================================================
+// Khóa ngoại & Mối quan hệ giữa các bảng
+// ====================================================================
+Ref: books.category_id > categories.id [delete: set null]
+Ref: book_copies.book_id > books.id [delete: cascade]
+Ref: borrow_records.copy_id > book_copies.id
+Ref: borrow_records.borrower_id > users.id
+Ref: borrow_records.librarian_id > users.id
+Ref: fines.borrow_record_id - borrow_records.id [delete: cascade]
+Ref: fines.librarian_id > users.id

@@ -16,6 +16,64 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // 2. Health check
+/**
+ * @openapi
+ * /api/health:
+ *   get:
+ *     summary: Kiểm tra tình trạng hoạt động của Node.js Express server
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Server đang hoạt động tốt.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "LBMS API is running."
+ *                 environment:
+ *                   type: string
+ *                   example: "development"
+ *                 timestamp:
+ *                   type: string
+ *                   example: "2026-10-20T11:30:00.000Z"
+ *
+ * /api/health/db:
+ *   get:
+ *     summary: Kiểm tra kết nối tới cơ sở dữ liệu SQL Server
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Kết nối SQL Server thành công.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Kết nối SQL Server thành công."
+ *                 database:
+ *                   type: string
+ *                   example: "LBMS_DB"
+ *                 server:
+ *                   type: string
+ *                   example: "lbms-sqlserver"
+ *       503:
+ *         description: Không thể kết nối hoặc truy vấn SQL Server.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
 app.get('/api/health', (req, res) => {
     res.status(200).json({
         success: true,
