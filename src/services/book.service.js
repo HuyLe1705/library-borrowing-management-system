@@ -140,7 +140,7 @@ const bookService = {
             ...bookData,
             title: bookData.title.trim(),
             isbn: bookData.isbn?.trim() || null,
-            coverURL: coverUrl ? String(coverUrl).trim() : null,
+            coverUrl: coverUrl ? String(coverUrl).trim() : null,
         });
     },
 
@@ -177,7 +177,7 @@ const bookService = {
             ...bookData,
             title: bookData.title.trim(),
             isbn: bookData.isbn?.trim() || null,
-            coverURL: coverUrl ? String(coverUrl).trim() : null,
+            coverUrl: coverUrl ? String(coverUrl).trim() : null,
         });
 
         if (!updatedBook) {
