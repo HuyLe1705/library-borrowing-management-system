@@ -58,6 +58,7 @@ const bookRepository = {
                 b.language,
                 b.description,
                 b.cover_url AS coverURL,
+                b.cover_url AS coverUrl,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id) AS totalCopies,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE') AS availableCopies
             FROM dbo.books b
@@ -130,7 +131,8 @@ const bookRepository = {
                     b.publish_year AS [year],
                     b.language,
                     b.description,
-                    b.cover_url AS coverURL
+                    b.cover_url AS coverURL,
+                    b.cover_url AS coverUrl
                 FROM dbo.books b
                 LEFT JOIN dbo.categories c ON c.id = b.category_id
                 WHERE b.id = @id;
@@ -189,7 +191,8 @@ const bookRepository = {
             request.input('year', sql.Int, book.year ?? null);
             request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
             request.input('description', sql.NVarChar, book.description || null);
-            request.input('coverURL', sql.NVarChar, book.coverURL || null);
+            const coverUrl = book.coverURL || book.coverUrl || book.cover_url || book.imageUrl || book.image_url || null;
+            request.input('coverURL', sql.NVarChar, coverUrl);
 
             const insertBook = await request.query(`
                 INSERT INTO dbo.books (
@@ -253,7 +256,8 @@ const bookRepository = {
         request.input('year', sql.Int, book.year ?? null);
         request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
         request.input('description', sql.NVarChar, book.description || null);
-        request.input('coverURL', sql.NVarChar, book.coverURL || null);
+        const coverUrl = book.coverURL || book.coverUrl || book.cover_url || book.imageUrl || book.image_url || null;
+        request.input('coverURL', sql.NVarChar, coverUrl);
 
         const result = await request.query(`
             UPDATE dbo.books

@@ -91,7 +91,7 @@ ON dbo.borrow_records(copy_id)
 WHERE status IN ('BORROWED', 'OVERDUE');
 GO
 
--- Dữ liệu mẫu (Mock Data phục vụ kiểm thử ngay)
+-- Dữ liệu mẫu (Mock Data phục vụ kiểm thử ngay - id được DB tự tăng IDENTITY(1,1) hoàn toàn tự động)
 INSERT INTO dbo.categories (name, description) VALUES
 (N'Công nghệ phần mềm', N'Sách về quy trình phát triển và quản lý dự án phần mềm'),
 (N'Cơ sở dữ liệu', N'Sách về thiết kế CSDL, SQL và hệ quản trị CSDL'),
@@ -104,12 +104,15 @@ INSERT INTO dbo.users (user_code, username, password_hash, full_name, email, pho
 ('2310862', 'hai.bui', 'hashed_pw', N'Bùi Hà Hải', 'hai.bui@hcmut.edu.vn', '0902000002', 'STUDENT', 'ACTIVE'),
 ('GV001', 'tam.nguyen', 'hashed_pw', N'Nguyễn Minh Tâm', 'tam.nguyen@hcmut.edu.vn', '0903000001', 'LECTURER', 'ACTIVE');
 
-INSERT INTO dbo.books (isbn, title, author, category_id, publisher, publish_year, description) VALUES
-('978-0133943030', N'Software Engineering (10th Edition)', N'Ian Sommerville', 1, N'Pearson', 2015, N'Giáo trình Kỹ nghệ phần mềm và Quản lý dự án'),
-('978-0078022159', N'Database System Concepts (7th Edition)', N'Abraham Silberschatz', 2, N'McGraw-Hill', 2019, N'Giáo trình nền tảng về hệ cơ sở dữ liệu');
+-- Chèn dữ liệu sách kèm URL ảnh bìa trực tuyến để phục vụ render giao diện Web/Mobile
+INSERT INTO dbo.books (isbn, title, author, category_id, publisher, publish_year, description, cover_url) VALUES
+('978-0133943030', N'Software Engineering (10th Edition)', N'Ian Sommerville', 1, N'Pearson', 2015, N'Giáo trình Kỹ nghệ phần mềm và Quản lý dự án', 'https://images.unsplash.com/photo-1532012164546-f432f2e3777a?auto=format&fit=crop&w=600&q=80'),
+('978-0078022159', N'Database System Concepts (7th Edition)', N'Abraham Silberschatz', 2, N'McGraw-Hill', 2019, N'Giáo trình nền tảng về hệ cơ sở dữ liệu', 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'),
+('978-0134610993', N'Artificial Intelligence: A Modern Approach (4th Edition)', N'Stuart Russell, Peter Norvig', 3, N'Pearson', 2020, N'Giáo trình kinh điển về trí tuệ nhân tạo và học máy', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80');
 
 INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status) VALUES
 (1, 'BC-SE-001', N'Kệ CNPM - Tầng 2 - Ô A1', 'AVAILABLE'),
 (1, 'BC-SE-002', N'Kệ CNPM - Tầng 2 - Ô A1', 'AVAILABLE'),
-(2, 'BC-DB-001', N'Kệ CSDL - Tầng 2 - Ô B2', 'AVAILABLE');
+(2, 'BC-DB-001', N'Kệ CSDL - Tầng 2 - Ô B2', 'AVAILABLE'),
+(3, 'BC-AI-001', N'Kệ AI - Tầng 3 - Ô C1', 'AVAILABLE');
 GO

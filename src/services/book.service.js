@@ -111,24 +111,36 @@ const bookService = {
     async createBook(book) {
         validateBook(book);
 
-        if (book.isbn && book.isbn.trim()) {
-            const existingIsbn = await bookRepository.findByIsbn(book.isbn.trim());
+        // Đảm bảo client không truyền tham số id khi tạo mới (id hoàn toàn tự tăng trong DB)
+        const { id: _ignoreId, ...bookData } = book;
+
+        if (bookData.isbn && bookData.isbn.trim()) {
+            const existingIsbn = await bookRepository.findByIsbn(bookData.isbn.trim());
             if (existingIsbn) {
                 throw new HttpError(409, 'Mã ISBN này đã tồn tại trong hệ thống.');
             }
         }
 
-        if (book.categoryId) {
-            const category = await bookRepository.findCategoryById(Number(book.categoryId));
+        if (bookData.categoryId) {
+            const category = await bookRepository.findCategoryById(Number(bookData.categoryId));
             if (!category) {
                 throw new HttpError(400, 'Thể loại không tồn tại.');
             }
         }
 
+        const coverUrl =
+            bookData.coverUrl ||
+            bookData.coverURL ||
+            bookData.cover_url ||
+            bookData.imageUrl ||
+            bookData.image_url ||
+            null;
+
         return bookRepository.create({
-            ...book,
-            title: book.title.trim(),
-            isbn: book.isbn?.trim() || null,
+            ...bookData,
+            title: bookData.title.trim(),
+            isbn: bookData.isbn?.trim() || null,
+            coverURL: coverUrl ? String(coverUrl).trim() : null,
         });
     },
 
@@ -136,24 +148,36 @@ const bookService = {
         const id = parseId(value);
         validateBook(book);
 
-        if (book.isbn && book.isbn.trim()) {
-            const existingIsbn = await bookRepository.findByIsbn(book.isbn.trim(), id);
+        // Bỏ qua id nếu client truyền trong body để tránh mâu thuẫn với path parameter
+        const { id: _ignoreId, ...bookData } = book;
+
+        if (bookData.isbn && bookData.isbn.trim()) {
+            const existingIsbn = await bookRepository.findByIsbn(bookData.isbn.trim(), id);
             if (existingIsbn) {
                 throw new HttpError(409, 'Mã ISBN này đã được sử dụng cho một cuốn sách khác.');
             }
         }
 
-        if (book.categoryId) {
-            const category = await bookRepository.findCategoryById(Number(book.categoryId));
+        if (bookData.categoryId) {
+            const category = await bookRepository.findCategoryById(Number(bookData.categoryId));
             if (!category) {
                 throw new HttpError(400, 'Thể loại không tồn tại.');
             }
         }
 
+        const coverUrl =
+            bookData.coverUrl ||
+            bookData.coverURL ||
+            bookData.cover_url ||
+            bookData.imageUrl ||
+            bookData.image_url ||
+            null;
+
         const updatedBook = await bookRepository.update(id, {
-            ...book,
-            title: book.title.trim(),
-            isbn: book.isbn?.trim() || null,
+            ...bookData,
+            title: bookData.title.trim(),
+            isbn: bookData.isbn?.trim() || null,
+            coverURL: coverUrl ? String(coverUrl).trim() : null,
         });
 
         if (!updatedBook) {
