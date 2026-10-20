@@ -57,7 +57,6 @@ const bookRepository = {
                 b.publish_year AS [year],
                 b.language,
                 b.description,
-                b.cover_url AS coverURL,
                 b.cover_url AS coverUrl,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id) AS totalCopies,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE') AS availableCopies
@@ -131,7 +130,6 @@ const bookRepository = {
                     b.publish_year AS [year],
                     b.language,
                     b.description,
-                    b.cover_url AS coverURL,
                     b.cover_url AS coverUrl
                 FROM dbo.books b
                 LEFT JOIN dbo.categories c ON c.id = b.category_id

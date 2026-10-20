@@ -205,7 +205,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 // Khẳng định: Payload gửi vào repository KHÔNG chứa id truyền vào
                 assert.equal(capturedPayload.id, undefined);
                 assert.equal(capturedPayload.title, 'Clean Code');
-                assert.equal(capturedPayload.coverURL, 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c');
+                assert.equal(capturedPayload.coverUrl, 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c');
             } finally {
                 bookRepository.create = originalCreate;
                 bookRepository.findByIsbn = originalFindByIsbn;

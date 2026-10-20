@@ -92,7 +92,6 @@ const swaggerOptions = {
                         language: { type: 'string', example: 'Tiếng Việt' },
                         description: { type: 'string', example: 'Giáo trình Kỹ nghệ phần mềm và Quản lý dự án' },
                         coverUrl: { type: 'string', example: 'https://images.unsplash.com/photo-1532012164546-f432f2e3777a' },
-                        coverURL: { type: 'string', example: 'https://images.unsplash.com/photo-1532012164546-f432f2e3777a' },
                         totalCopies: { type: 'integer', example: 2 },
                         availableCopies: { type: 'integer', example: 2 },
                         copies: {
