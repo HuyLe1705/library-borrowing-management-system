@@ -189,8 +189,7 @@ const bookRepository = {
             request.input('year', sql.Int, book.year ?? null);
             request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
             request.input('description', sql.NVarChar, book.description || null);
-            const coverUrl = book.coverURL || book.coverUrl || book.cover_url || book.imageUrl || book.image_url || null;
-            request.input('coverURL', sql.NVarChar, coverUrl);
+            request.input('coverURL', sql.NVarChar, book.coverUrl ? String(book.coverUrl).trim() : null);
 
             const insertBook = await request.query(`
                 INSERT INTO dbo.books (
@@ -254,8 +253,7 @@ const bookRepository = {
         request.input('year', sql.Int, book.year ?? null);
         request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
         request.input('description', sql.NVarChar, book.description || null);
-        const coverUrl = book.coverURL || book.coverUrl || book.cover_url || book.imageUrl || book.image_url || null;
-        request.input('coverURL', sql.NVarChar, coverUrl);
+        request.input('coverURL', sql.NVarChar, book.coverUrl ? String(book.coverUrl).trim() : null);
 
         const result = await request.query(`
             UPDATE dbo.books

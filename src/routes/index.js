@@ -5,6 +5,8 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const bookRoutes = require('./book.routes');
 const categoryRoutes = require('./category.routes');
 const borrowRoutes = require('./borrow.routes');
+const authRoutes = require('./auth.routes');
+const uploadRoutes = require('./upload.routes');
 
 const router = express.Router();
 
@@ -40,11 +42,27 @@ const swaggerOptions = {
                 description: 'Quy trình mượn sách (Checkout), trả sách (Return), gia hạn (Renew) và thanh toán tiền phạt (Fines)',
             },
             {
+                name: 'Auth',
+                description: 'Xác thực tài khoản, đăng nhập và thông tin phiên làm việc',
+            },
+            {
+                name: 'Upload',
+                description: 'Tải ảnh bìa sách lên máy chủ cục bộ (Local Storage)',
+            },
+            {
                 name: 'System',
                 description: 'Kiểm tra trạng thái máy chủ và kết nối cơ sở dữ liệu',
             },
         ],
         components: {
+            securitySchemes: {
+                BearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                    description: 'Nhập JWT token dạng: Bearer <token>',
+                },
+            },
             schemas: {
                 SuccessResponse: {
                     type: 'object',
@@ -167,6 +185,8 @@ router.get('/', (req, res) => {
         endpoints: {
             health: '/api/health',
             dbHealth: '/api/health/db',
+            auth: '/api/auth',
+            upload: '/api/upload',
             books: '/api/books',
             categories: '/api/categories',
             borrows: '/api/borrows',
@@ -174,6 +194,8 @@ router.get('/', (req, res) => {
     });
 });
 
+router.use('/auth', authRoutes);
+router.use('/upload', uploadRoutes);
 router.use('/books', bookRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/borrows', borrowRoutes);

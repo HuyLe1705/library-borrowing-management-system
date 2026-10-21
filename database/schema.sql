@@ -106,9 +106,9 @@ INSERT INTO dbo.users (user_code, username, password_hash, full_name, email, pho
 
 -- Chèn dữ liệu sách kèm URL ảnh bìa trực tuyến để phục vụ render giao diện Web/Mobile
 INSERT INTO dbo.books (isbn, title, author, category_id, publisher, publish_year, description, cover_url) VALUES
-('978-0133943030', N'Software Engineering (10th Edition)', N'Ian Sommerville', 1, N'Pearson', 2015, N'Giáo trình Kỹ nghệ phần mềm và Quản lý dự án', 'https://images.unsplash.com/photo-1532012164546-f432f2e3777a?auto=format&fit=crop&w=600&q=80'),
-('978-0078022159', N'Database System Concepts (7th Edition)', N'Abraham Silberschatz', 2, N'McGraw-Hill', 2019, N'Giáo trình nền tảng về hệ cơ sở dữ liệu', 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'),
-('978-0134610993', N'Artificial Intelligence: A Modern Approach (4th Edition)', N'Stuart Russell, Peter Norvig', 3, N'Pearson', 2020, N'Giáo trình kinh điển về trí tuệ nhân tạo và học máy', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80');
+('978-0133943030', N'Software Engineering (10th Edition)', N'Ian Sommerville', 1, N'Pearson', 2015, N'Giáo trình Kỹ nghệ phần mềm và Quản lý dự án', 'https://m.media-amazon.com/images/I/91TcAJPaGNL._AC_UF894,1000_QL80_.jpg'),
+('978-0078022159', N'Database System Concepts (7th Edition)', N'Abraham Silberschatz', 2, N'McGraw-Hill', 2019, N'Giáo trình nền tảng về hệ cơ sở dữ liệu', 'https://www.db-book.com/images/db7-cover-tiny.jpg'),
+('978-0134610993', N'Artificial Intelligence: A Modern Approach (4th Edition)', N'Stuart Russell, Peter Norvig', 3, N'Pearson', 2020, N'Giáo trình kinh điển về trí tuệ nhân tạo và học máy', 'https://pos.nvncdn.com/a25e0e-12365/ps/20260129_fHfz1XR6yi.jpeg?v=1769659684');
 
 INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status) VALUES
 (1, 'BC-SE-001', N'Kệ CNPM - Tầng 2 - Ô A1', 'AVAILABLE'),
