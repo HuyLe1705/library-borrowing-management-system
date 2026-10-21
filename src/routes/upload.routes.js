@@ -1,6 +1,7 @@
 const express = require('express');
 const upload = require('../middlewares/upload.middleware');
 const uploadController = require('../controllers/upload.controller');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -86,6 +87,6 @@ const uploadImageMiddleware = (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', uploadImageMiddleware, uploadController.uploadImage);
+router.post('/', authenticate, authorize('LIBRARIAN', 'ADMIN'), uploadImageMiddleware, uploadController.uploadImage);
 
 module.exports = router;

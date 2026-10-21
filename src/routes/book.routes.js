@@ -1,5 +1,6 @@
 const express = require('express');
 const bookController = require('../controllers/book.controller');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -155,7 +156,7 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/', bookController.getBooks);
-router.post('/', bookController.createBook);
+router.post('/', authenticate, authorize('LIBRARIAN', 'ADMIN'), bookController.createBook);
 
 /**
  * @openapi
@@ -321,7 +322,7 @@ router.post('/', bookController.createBook);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:id', bookController.getBookById);
-router.put('/:id', bookController.updateBook);
-router.delete('/:id', bookController.deleteBook);
+router.put('/:id', authenticate, authorize('LIBRARIAN', 'ADMIN'), bookController.updateBook);
+router.delete('/:id', authenticate, authorize('LIBRARIAN', 'ADMIN'), bookController.deleteBook);
 
 module.exports = router;

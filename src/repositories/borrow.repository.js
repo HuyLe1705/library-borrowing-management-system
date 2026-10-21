@@ -275,7 +275,7 @@ const borrowRepository = {
     },
 
     // Thực hiện Gia hạn sách (Tối đa 1 lần, cộng thêm 7 ngày nếu chưa quá hạn)
-    async renewBorrow(borrowId) {
+    async renewBorrow(borrowId, currentUser = null) {
         const pool = await getPool();
         const request = pool.request();
         request.input('id', sql.Int, borrowId);
@@ -284,6 +284,7 @@ const borrowRepository = {
             SELECT
                 br.id,
                 br.borrower_id AS borrowerId,
+                u.user_code AS borrowerCode,
                 br.due_date AS dueDate,
                 br.renewal_count AS renewalCount,
                 br.status,
@@ -304,6 +305,14 @@ const borrowRepository = {
         if (!record) {
             throw new HttpError(404, 'Không tìm thấy phiếu mượn.');
         }
+
+        // Kiểm tra quyền độc giả: độc giả chỉ được phép gia hạn phiếu mượn của chính mình
+        if (currentUser && ['STUDENT', 'LECTURER'].includes(currentUser.role)) {
+            if (record.borrowerId !== currentUser.id && record.borrowerCode !== currentUser.userCode) {
+                throw new HttpError(403, 'Bạn chỉ có quyền gia hạn phiếu mượn của chính mình.');
+            }
+        }
+
         if (record.userStatus === 'LOCKED' || record.unpaidFines > 0 || record.anyOverdue > 0) {
             throw new HttpError(403, 'Không thể gia hạn vì độc giả đang bị khóa thẻ, có sách quá hạn hoặc nợ tiền phạt chưa đóng.');
         }
