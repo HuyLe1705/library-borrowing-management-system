@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const { getPool } = require('./config/database');
 const apiRoutes = require('./routes');
@@ -14,6 +15,9 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// 1. Phục vụ file tĩnh ảnh bìa đã tải lên
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 2. Health check
 /**

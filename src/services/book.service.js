@@ -128,19 +128,13 @@ const bookService = {
             }
         }
 
-        const coverUrl =
-            bookData.coverUrl ||
-            bookData.coverURL ||
-            bookData.cover_url ||
-            bookData.imageUrl ||
-            bookData.image_url ||
-            null;
+        const coverUrl = bookData.coverUrl ? String(bookData.coverUrl).trim() : null;
 
         return bookRepository.create({
             ...bookData,
             title: bookData.title.trim(),
             isbn: bookData.isbn?.trim() || null,
-            coverUrl: coverUrl ? String(coverUrl).trim() : null,
+            coverUrl,
         });
     },
 
@@ -165,19 +159,13 @@ const bookService = {
             }
         }
 
-        const coverUrl =
-            bookData.coverUrl ||
-            bookData.coverURL ||
-            bookData.cover_url ||
-            bookData.imageUrl ||
-            bookData.image_url ||
-            null;
+        const coverUrl = bookData.coverUrl ? String(bookData.coverUrl).trim() : null;
 
         const updatedBook = await bookRepository.update(id, {
             ...bookData,
             title: bookData.title.trim(),
             isbn: bookData.isbn?.trim() || null,
-            coverUrl: coverUrl ? String(coverUrl).trim() : null,
+            coverUrl,
         });
 
         if (!updatedBook) {
