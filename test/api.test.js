@@ -2,12 +2,53 @@ const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const swaggerJsdoc = require('swagger-jsdoc');
+const jwt = require('jsonwebtoken');
 
 const app = require('../src/app');
 const bookRepository = require('../src/repositories/book.repository');
 const categoryRepository = require('../src/repositories/category.repository');
 const borrowRepository = require('../src/repositories/borrow.repository');
 const userRepository = require('../src/repositories/user.repository');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'lbms_default_jwt_secret_key_2026';
+
+const adminToken = jwt.sign(
+    { id: 1, userCode: 'ADMIN01', username: 'admin', role: 'ADMIN' },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+);
+const librarianToken = jwt.sign(
+    { id: 2, userCode: 'TT001', username: 'thu.thu', role: 'LIBRARIAN' },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+);
+const studentToken = jwt.sign(
+    { id: 3, userCode: '2311159', username: 'huy.le', role: 'STUDENT' },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+);
+const lecturerToken = jwt.sign(
+    { id: 4, userCode: 'GV001', username: 'gv.nguyen', role: 'LECTURER' },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+);
+
+const adminHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${adminToken}`,
+};
+const librarianHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${librarianToken}`,
+};
+const studentHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${studentToken}`,
+};
+const lecturerHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${lecturerToken}`,
+};
 
 describe('BK Library (LBMS) API Test Suite', () => {
     let server;
@@ -173,7 +214,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/books - Bắt buộc phải có tên sách (title)', async () => {
             const res = await fetch(`${baseUrl}/api/books`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: adminHeaders,
                 body: JSON.stringify({ author: 'Tác giả A' }),
             });
             assert.equal(res.status, 400);
@@ -197,7 +238,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             try {
                 const res = await fetch(`${baseUrl}/api/books`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: adminHeaders,
                     body: JSON.stringify({
                         id: 99999, // Cố tình truyền id để kiểm tra hệ thống có tự loại bỏ không
                         title: 'Clean Code',
@@ -226,7 +267,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             try {
                 const res = await fetch(`${baseUrl}/api/books`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: adminHeaders,
                     body: JSON.stringify({
                         title: 'Sách trùng mã',
                         isbn: '978-0133943030',
@@ -252,7 +293,10 @@ describe('BK Library (LBMS) API Test Suite', () => {
             });
 
             try {
-                const res = await fetch(`${baseUrl}/api/books/1`, { method: 'DELETE' });
+                const res = await fetch(`${baseUrl}/api/books/1`, {
+                    method: 'DELETE',
+                    headers: adminHeaders,
+                });
                 assert.equal(res.status, 409);
                 const body = await res.json();
                 assert.ok(body.message.includes('đang có bản sao được độc giả mượn'));
@@ -287,7 +331,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/categories - Bắt buộc phải có tên danh mục', async () => {
             const res = await fetch(`${baseUrl}/api/categories`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: adminHeaders,
                 body: JSON.stringify({ description: 'Thiếu tên' }),
             });
             assert.equal(res.status, 400);
@@ -302,7 +346,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             try {
                 const res = await fetch(`${baseUrl}/api/categories`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: adminHeaders,
                     body: JSON.stringify({ name: 'Cơ sở dữ liệu' }),
                 });
                 assert.equal(res.status, 409);
@@ -323,6 +367,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             try {
                 const res = await fetch(`${baseUrl}/api/categories/Co%20so%20du%20lieu`, {
                     method: 'DELETE',
+                    headers: adminHeaders,
                 });
                 assert.equal(res.status, 409);
                 const body = await res.json();
@@ -341,7 +386,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/borrows/checkout - Bắt buộc phải có userCode và barcode', async () => {
             const res = await fetch(`${baseUrl}/api/borrows/checkout`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: librarianHeaders,
                 body: JSON.stringify({ userCode: '2311159' }), // Thiếu barcode
             });
             assert.equal(res.status, 400);
@@ -361,7 +406,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             try {
                 const res = await fetch(`${baseUrl}/api/borrows/checkout`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: librarianHeaders,
                     body: JSON.stringify({
                         userCode: '2311159',
                         barcode: 'BC-SE-001',
@@ -379,7 +424,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/borrows/return - Bắt buộc phải có barcode khi trả sách', async () => {
             const res = await fetch(`${baseUrl}/api/borrows/return`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: librarianHeaders,
                 body: JSON.stringify({}),
             });
             assert.equal(res.status, 400);
@@ -390,6 +435,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/borrows/:id/renew - Kiểm tra tính hợp lệ của ID phiếu mượn', async () => {
             const res = await fetch(`${baseUrl}/api/borrows/xyz/renew`, {
                 method: 'POST',
+                headers: studentHeaders,
             });
             assert.equal(res.status, 400);
             const body = await res.json();
@@ -399,6 +445,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('PATCH /api/borrows/fines/:id/pay - Kiểm tra tính hợp lệ của ID phiếu phạt', async () => {
             const res = await fetch(`${baseUrl}/api/borrows/fines/abc/pay`, {
                 method: 'PATCH',
+                headers: librarianHeaders,
             });
             assert.equal(res.status, 400);
             const body = await res.json();
@@ -697,6 +744,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/upload - Báo lỗi 400 khi không có file ảnh đính kèm', async () => {
             const res = await fetch(`${baseUrl}/api/upload`, {
                 method: 'POST',
+                headers: { Authorization: `Bearer ${adminToken}` },
             });
             assert.equal(res.status, 400);
             const body = await res.json();
@@ -710,6 +758,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
 
             const res = await fetch(`${baseUrl}/api/upload`, {
                 method: 'POST',
+                headers: { Authorization: `Bearer ${adminToken}` },
                 body: formData,
             });
             assert.equal(res.status, 400);
@@ -726,6 +775,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
 
             const res = await fetch(`${baseUrl}/api/upload`, {
                 method: 'POST',
+                headers: { Authorization: `Bearer ${adminToken}` },
                 body: formData,
             });
             assert.equal(res.status, 201);
@@ -738,6 +788,203 @@ describe('BK Library (LBMS) API Test Suite', () => {
             const staticRes = await fetch(body.data.coverUrl);
             assert.equal(staticRes.status, 200);
             assert.equal(staticRes.headers.get('content-type'), 'image/png');
+        });
+    });
+
+    // =========================================================================
+    // 8. KIỂM THỬ PHÂN QUYỀN & KIỂM SOÁT TRUY CẬP (RBAC AUTHORIZATION)
+    // =========================================================================
+    describe('8. Phân quyền người dùng & Kiểm soát truy cập (RBAC Authorization)', () => {
+        test('Chặn truy cập 401 khi không truyền Token vào các route bảo vệ', async () => {
+            // Sách (POST, PUT, DELETE)
+            const resBookPost = await fetch(`${baseUrl}/api/books`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'Test Sách Không Token' }),
+            });
+            assert.equal(resBookPost.status, 401);
+
+            const resBookDelete = await fetch(`${baseUrl}/api/books/1`, { method: 'DELETE' });
+            assert.equal(resBookDelete.status, 401);
+
+            // Thể loại (POST, PUT, DELETE)
+            const resCatPost = await fetch(`${baseUrl}/api/categories`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'Test Thể loại Không Token' }),
+            });
+            assert.equal(resCatPost.status, 401);
+
+            // Tải ảnh (POST)
+            const resUpload = await fetch(`${baseUrl}/api/upload`, { method: 'POST' });
+            assert.equal(resUpload.status, 401);
+
+            // Mượn trả (GET /api/borrows, POST /return, PATCH /fines/:id/pay)
+            const resBorrows = await fetch(`${baseUrl}/api/borrows`);
+            assert.equal(resBorrows.status, 401);
+
+            const resReturn = await fetch(`${baseUrl}/api/borrows/return`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ barcode: 'BC-01' }),
+            });
+            assert.equal(resReturn.status, 401);
+
+            const resFinePay = await fetch(`${baseUrl}/api/borrows/fines/1/pay`, { method: 'PATCH' });
+            assert.equal(resFinePay.status, 401);
+        });
+
+        test('Chặn truy cập 403 Forbidden khi STUDENT gọi các endpoint quản trị dành cho LIBRARIAN/ADMIN', async () => {
+            // STUDENT gọi tạo sách -> 403
+            const resBook = await fetch(`${baseUrl}/api/books`, {
+                method: 'POST',
+                headers: studentHeaders,
+                body: JSON.stringify({ title: 'Hack thư viện' }),
+            });
+            assert.equal(resBook.status, 403);
+            const bookBody = await resBook.json();
+            assert.ok(bookBody.message.includes('Bạn không có quyền thực hiện hành động này'));
+
+            // STUDENT gọi xóa sách -> 403
+            const resDeleteBook = await fetch(`${baseUrl}/api/books/1`, {
+                method: 'DELETE',
+                headers: studentHeaders,
+            });
+            assert.equal(resDeleteBook.status, 403);
+
+            // STUDENT gọi tạo danh mục -> 403
+            const resCat = await fetch(`${baseUrl}/api/categories`, {
+                method: 'POST',
+                headers: studentHeaders,
+                body: JSON.stringify({ name: 'Hack thể loại' }),
+            });
+            assert.equal(resCat.status, 403);
+
+            // STUDENT gọi upload ảnh -> 403
+            const resUpload = await fetch(`${baseUrl}/api/upload`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${studentToken}` },
+            });
+            assert.equal(resUpload.status, 403);
+
+            // STUDENT gọi xử lý trả sách -> 403
+            const resReturn = await fetch(`${baseUrl}/api/borrows/return`, {
+                method: 'POST',
+                headers: studentHeaders,
+                body: JSON.stringify({ barcode: 'BC-01' }),
+            });
+            assert.equal(resReturn.status, 403);
+
+            // STUDENT gọi thu tiền phạt -> 403
+            const resPayFine = await fetch(`${baseUrl}/api/borrows/fines/1/pay`, {
+                method: 'PATCH',
+                headers: studentHeaders,
+            });
+            assert.equal(resPayFine.status, 403);
+        });
+
+        test('Chặn 403 khi độc giả (STUDENT) mượn sách hộ mã độc giả khác', async () => {
+            const res = await fetch(`${baseUrl}/api/borrows/checkout`, {
+                method: 'POST',
+                headers: studentHeaders, // Token của huy.le (MSSV: 2311159)
+                body: JSON.stringify({
+                    userCode: '9999999', // Cố tình mượn cho người khác
+                    barcode: 'BC-SE-001',
+                }),
+            });
+            assert.equal(res.status, 403);
+            const body = await res.json();
+            assert.ok(body.message.includes('Bạn chỉ có quyền mượn sách cho chính tài khoản của mình'));
+        });
+
+        test('Chặn 403 khi độc giả (STUDENT) gia hạn phiếu mượn của độc giả khác', async () => {
+            const originalRenew = borrowRepository.renewBorrow;
+            borrowRepository.renewBorrow = async (id, currentUser) => {
+                if (currentUser && currentUser.userCode !== 'OTHER_USER') {
+                    const HttpError = require('../src/utils/httpError');
+                    throw new HttpError(403, 'Bạn chỉ có quyền gia hạn phiếu mượn của chính mình.');
+                }
+                return { id, renewed: true };
+            };
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrows/10/renew`, {
+                    method: 'POST',
+                    headers: studentHeaders,
+                });
+                assert.equal(res.status, 403);
+                const body = await res.json();
+                assert.ok(body.message.includes('Bạn chỉ có quyền gia hạn phiếu mượn của chính mình'));
+            } finally {
+                borrowRepository.renewBorrow = originalRenew;
+            }
+        });
+
+        test('Cho phép Thủ thư (LIBRARIAN) và Admin (ADMIN) thực hiện thành công các quyền quản trị', async () => {
+            const originalCreateCat = categoryRepository.create;
+            const originalFindByName = categoryRepository.findByName;
+            categoryRepository.findByName = async () => null;
+            categoryRepository.create = async (payload) => ({ id: 5, ...payload });
+
+            try {
+                // LIBRARIAN tạo danh mục thành công
+                const resLib = await fetch(`${baseUrl}/api/categories`, {
+                    method: 'POST',
+                    headers: librarianHeaders,
+                    body: JSON.stringify({ name: 'Khoa học máy tính' }),
+                });
+                assert.equal(resLib.status, 201);
+
+                // ADMIN tạo danh mục thành công
+                const resAdmin = await fetch(`${baseUrl}/api/categories`, {
+                    method: 'POST',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ name: 'Trí tuệ nhân tạo' }),
+                });
+                assert.equal(resAdmin.status, 201);
+            } finally {
+                categoryRepository.create = originalCreateCat;
+                categoryRepository.findByName = originalFindByName;
+            }
+        });
+
+        test('Độc giả (STUDENT) xem danh sách mượn tự động bị filter theo mã độc giả của mình', async () => {
+            const originalFindAll = borrowRepository.findAll;
+            let capturedQuery = null;
+            borrowRepository.findAll = async (query) => {
+                capturedQuery = query;
+                return [];
+            };
+
+            try {
+                // STUDENT gửi query userCode khác nhưng hệ thống bắt buộc ghi đè bằng userCode của token
+                const res = await fetch(`${baseUrl}/api/borrows?userCode=9999999`, {
+                    headers: studentHeaders,
+                });
+                assert.equal(res.status, 200);
+                assert.equal(capturedQuery.userCode, '2311159');
+            } finally {
+                borrowRepository.findAll = originalFindAll;
+            }
+        });
+
+        test('Thủ thư (LIBRARIAN) xem danh sách mượn có thể xem của mọi người mà không bị ép userCode', async () => {
+            const originalFindAll = borrowRepository.findAll;
+            let capturedQuery = null;
+            borrowRepository.findAll = async (query) => {
+                capturedQuery = query;
+                return [];
+            };
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrows?userCode=2311159`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                assert.equal(capturedQuery.userCode, '2311159');
+            } finally {
+                borrowRepository.findAll = originalFindAll;
+            }
         });
     });
 });

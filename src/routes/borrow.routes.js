@@ -1,5 +1,6 @@
 const express = require('express');
 const borrowController = require('../controllers/borrow.controller');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -306,10 +307,10 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', borrowController.getBorrows);
-router.post('/checkout', borrowController.borrowBook);
-router.post('/return', borrowController.returnBook);
-router.post('/:id/renew', borrowController.renewBorrow);
-router.patch('/fines/:id/pay', borrowController.payFine);
+router.get('/', authenticate, borrowController.getBorrows);
+router.post('/checkout', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowController.borrowBook);
+router.post('/return', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.returnBook);
+router.post('/:id/renew', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowController.renewBorrow);
+router.patch('/fines/:id/pay', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.payFine);
 
 module.exports = router;

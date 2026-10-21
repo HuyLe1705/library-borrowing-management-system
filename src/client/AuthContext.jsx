@@ -156,6 +156,10 @@ export const AuthProvider = ({ children }) => {
         token,
         isAuthenticated: !!user,
         role: user?.role || null, // 'STUDENT' | 'LECTURER' | 'LIBRARIAN' | 'ADMIN'
+        isAdmin: user?.role === 'ADMIN',
+        isLibrarian: user?.role === 'LIBRARIAN' || user?.role === 'ADMIN',
+        isReader: user?.role === 'STUDENT' || user?.role === 'LECTURER',
+        hasRole: (...roles) => (user?.role ? roles.includes(user.role) : false),
         loading,
         error,
         register,

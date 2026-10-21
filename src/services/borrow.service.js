@@ -33,13 +33,13 @@ const borrowService = {
         return borrowRepository.returnBook({ barcode, librarianCode });
     },
 
-    async renewBorrow(id) {
+    async renewBorrow(id, currentUser = null) {
         const borrowId = Number(id);
         if (!Number.isSafeInteger(borrowId) || borrowId <= 0) {
             throw new HttpError(400, 'ID phiếu mượn không hợp lệ.');
         }
 
-        return borrowRepository.renewBorrow(borrowId);
+        return borrowRepository.renewBorrow(borrowId, currentUser);
     },
 
     async payFine(id) {

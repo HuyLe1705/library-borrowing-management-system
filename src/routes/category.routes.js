@@ -1,5 +1,6 @@
 const express = require('express');
 const categoryController = require('../controllers/category.controller');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -80,7 +81,7 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/', categoryController.getCategories);
-router.post('/', categoryController.createCategory);
+router.post('/', authenticate, authorize('LIBRARIAN', 'ADMIN'), categoryController.createCategory);
 
 /**
  * @openapi
@@ -215,7 +216,7 @@ router.post('/', categoryController.createCategory);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:name', categoryController.getCategoryByName);
-router.put('/:name', categoryController.updateCategory);
-router.delete('/:name', categoryController.deleteCategory);
+router.put('/:name', authenticate, authorize('LIBRARIAN', 'ADMIN'), categoryController.updateCategory);
+router.delete('/:name', authenticate, authorize('LIBRARIAN', 'ADMIN'), categoryController.deleteCategory);
 
 module.exports = router;
