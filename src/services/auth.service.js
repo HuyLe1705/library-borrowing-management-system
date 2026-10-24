@@ -86,6 +86,19 @@ const authService = {
             throw new HttpError(400, 'Email không đúng định dạng.');
         }
 
+        const ALLOWED_ROLES = ['STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'];
+        let safeRole = 'STUDENT';
+        if (role !== undefined && role !== null && String(role).trim() !== '') {
+            const normalizedRole = String(role).trim().toUpperCase();
+            if (!ALLOWED_ROLES.includes(normalizedRole)) {
+                throw new HttpError(
+                    400,
+                    `Vai trò người dùng không hợp lệ. Chỉ chấp nhận các vai trò: ${ALLOWED_ROLES.join(', ')}.`
+                );
+            }
+            safeRole = normalizedRole;
+        }
+
         // Kiểm tra trùng lặp username
         const existingUsername = await userRepository.findByUsername(trimmedUsername);
         if (existingUsername) {
@@ -98,17 +111,21 @@ const authService = {
             throw new HttpError(409, 'Email này đã được đăng ký cho một tài khoản khác.');
         }
 
-        // Tạo mã userCode nếu client không truyền (ví dụ MSSV/mã thẻ)
+        // Tạo mã userCode nếu client không truyền (ví dụ MSSV/mã thẻ/mã nhân viên)
+        let defaultPrefix = 'U';
+        if (safeRole === 'LIBRARIAN') defaultPrefix = 'TT';
+        else if (safeRole === 'ADMIN') defaultPrefix = 'AD';
+        else if (safeRole === 'LECTURER') defaultPrefix = 'GV';
+
         const finalUserCode = userCode && String(userCode).trim()
             ? String(userCode).trim()
-            : 'U' + Date.now().toString().slice(-7);
+            : defaultPrefix + Date.now().toString().slice(-7);
 
         const existingCode = await userRepository.findByUserCode(finalUserCode);
         if (existingCode) {
-            throw new HttpError(409, 'Mã người dùng (MSSV) này đã tồn tại trong hệ thống.');
+            throw new HttpError(409, 'Mã người dùng (userCode / MSSV) này đã tồn tại trong hệ thống.');
         }
 
-        const safeRole = role && ['STUDENT', 'LECTURER'].includes(role) ? role : 'STUDENT';
         const passwordHash = bcrypt.hashSync(trimmedPassword, 10);
 
         const newUser = await userRepository.create({

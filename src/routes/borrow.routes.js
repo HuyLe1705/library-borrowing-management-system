@@ -50,9 +50,11 @@ const router = express.Router();
  *
  * /api/borrows/checkout:
  *   post:
- *     summary: Tạo phiếu mượn sách mới (Checkout)
- *     description: Áp dụng quy tắc hạn mức (Sinh viên tối đa 5 cuốn/14 ngày, Giảng viên tối đa 10 cuốn/30 ngày). Chặn độc giả bị khóa thẻ, nợ phạt hoặc có sách quá hạn. ID phiếu mượn do CSDL tự tăng.
+ *     summary: Cho mượn sách tại quầy / Dashboard (Checkout - Dành cho Thủ thư/Admin)
+ *     description: Lập phiếu cho độc giả (Sinh viên / Giảng viên) mượn sách từ Dashboard của Thủ thư. Áp dụng quy tắc hạn mức (Sinh viên tối đa 5 cuốn/14 ngày, Giảng viên tối đa 10 cuốn/30 ngày). Chặn độc giả bị khóa thẻ, nợ phạt hoặc có sách quá hạn. ID phiếu mượn do CSDL tự tăng.
  *     tags: [Borrows]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -308,7 +310,7 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/', authenticate, borrowController.getBorrows);
-router.post('/checkout', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowController.borrowBook);
+router.post('/checkout', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.borrowBook);
 router.post('/return', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.returnBook);
 router.post('/:id/renew', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowController.renewBorrow);
 router.patch('/fines/:id/pay', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.payFine);

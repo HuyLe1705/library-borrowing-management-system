@@ -735,6 +735,87 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 userRepository.create = originalCreate;
             }
         });
+
+        test('POST /api/auth/register - Cho phép đăng ký với vai trò Thủ thư (LIBRARIAN) và Giảng viên (LECTURER)', async () => {
+            const originalFindByUsername = userRepository.findByUsername;
+            const originalFindByEmail = userRepository.findByEmail;
+            const originalFindByUserCode = userRepository.findByUserCode;
+            const originalCreate = userRepository.create;
+
+            userRepository.findByUsername = async () => null;
+            userRepository.findByEmail = async () => null;
+            userRepository.findByUserCode = async () => null;
+            userRepository.create = async (userData) => ({
+                id: 11,
+                userCode: userData.userCode,
+                username: userData.username,
+                fullName: userData.fullName,
+                email: userData.email,
+                phone: userData.phone,
+                role: userData.role,
+                status: 'ACTIVE',
+            });
+
+            try {
+                // Đăng ký tài khoản Thủ thư (LIBRARIAN)
+                const resLib = await fetch(`${baseUrl}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'thuthu.moi',
+                        password: 'secure_password_123',
+                        fullName: 'Trần Văn Thủ Thư',
+                        email: 'thuthu.moi@hcmut.edu.vn',
+                        role: 'LIBRARIAN',
+                    }),
+                });
+                assert.equal(resLib.status, 201);
+                const bodyLib = await resLib.json();
+                assert.equal(bodyLib.success, true);
+                assert.equal(bodyLib.data.user.role, 'LIBRARIAN');
+                assert.ok(bodyLib.data.user.userCode.startsWith('TT'));
+
+                // Đăng ký tài khoản Giảng viên (LECTURER)
+                const resLec = await fetch(`${baseUrl}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'gv.nguyenan',
+                        password: 'secure_password_123',
+                        fullName: 'TS. Nguyễn An',
+                        email: 'an.ts@hcmut.edu.vn',
+                        role: 'LECTURER',
+                    }),
+                });
+                assert.equal(resLec.status, 201);
+                const bodyLec = await resLec.json();
+                assert.equal(bodyLec.success, true);
+                assert.equal(bodyLec.data.user.role, 'LECTURER');
+                assert.ok(bodyLec.data.user.userCode.startsWith('GV'));
+            } finally {
+                userRepository.findByUsername = originalFindByUsername;
+                userRepository.findByEmail = originalFindByEmail;
+                userRepository.findByUserCode = originalFindByUserCode;
+                userRepository.create = originalCreate;
+            }
+        });
+
+        test('POST /api/auth/register - Báo lỗi 400 khi truyền vai trò (role) không hợp lệ', async () => {
+            const res = await fetch(`${baseUrl}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: 'hacker123',
+                    password: 'secure_password_123',
+                    fullName: 'Super Hacker',
+                    email: 'hacker@test.com',
+                    role: 'SUPERADMIN', // Role không nằm trong danh sách cho phép
+                }),
+            });
+            assert.equal(res.status, 400);
+            const body = await res.json();
+            assert.ok(body.message.includes('Vai trò người dùng không hợp lệ'));
+        });
     });
 
     // =========================================================================
@@ -867,6 +948,16 @@ describe('BK Library (LBMS) API Test Suite', () => {
             });
             assert.equal(resUpload.status, 403);
 
+            // STUDENT gọi tạo phiếu mượn sách (checkout) -> 403
+            const resCheckout = await fetch(`${baseUrl}/api/borrows/checkout`, {
+                method: 'POST',
+                headers: studentHeaders,
+                body: JSON.stringify({ userCode: '2311159', barcode: 'BC-01' }),
+            });
+            assert.equal(resCheckout.status, 403);
+            const checkoutBody = await resCheckout.json();
+            assert.ok(checkoutBody.message.includes('Bạn không có quyền thực hiện hành động này'));
+
             // STUDENT gọi xử lý trả sách -> 403
             const resReturn = await fetch(`${baseUrl}/api/borrows/return`, {
                 method: 'POST',
@@ -883,18 +974,32 @@ describe('BK Library (LBMS) API Test Suite', () => {
             assert.equal(resPayFine.status, 403);
         });
 
-        test('Chặn 403 khi độc giả (STUDENT) mượn sách hộ mã độc giả khác', async () => {
-            const res = await fetch(`${baseUrl}/api/borrows/checkout`, {
+        test('Chặn 403 khi độc giả (STUDENT / LECTURER) tự gọi checkout tạo phiếu mượn (chỉ dành cho Thủ thư/Admin trên Dashboard)', async () => {
+            // STUDENT bị chặn
+            const resStudent = await fetch(`${baseUrl}/api/borrows/checkout`, {
                 method: 'POST',
                 headers: studentHeaders, // Token của huy.le (MSSV: 2311159)
                 body: JSON.stringify({
-                    userCode: '9999999', // Cố tình mượn cho người khác
+                    userCode: '2311159',
                     barcode: 'BC-SE-001',
                 }),
             });
-            assert.equal(res.status, 403);
-            const body = await res.json();
-            assert.ok(body.message.includes('Bạn chỉ có quyền mượn sách cho chính tài khoản của mình'));
+            assert.equal(resStudent.status, 403);
+            const bodyStudent = await resStudent.json();
+            assert.ok(bodyStudent.message.includes('Bạn không có quyền thực hiện hành động này'));
+
+            // LECTURER cũng bị chặn (vì chỉ Thủ thư/Admin mới thao tác trên Dashboard cho mượn)
+            const resLecturer = await fetch(`${baseUrl}/api/borrows/checkout`, {
+                method: 'POST',
+                headers: lecturerHeaders, // Token của Giảng viên GV001
+                body: JSON.stringify({
+                    userCode: 'GV001',
+                    barcode: 'BC-SE-001',
+                }),
+            });
+            assert.equal(resLecturer.status, 403);
+            const bodyLecturer = await resLecturer.json();
+            assert.ok(bodyLecturer.message.includes('Bạn không có quyền thực hiện hành động này'));
         });
 
         test('Chặn 403 khi độc giả (STUDENT) gia hạn phiếu mượn của độc giả khác', async () => {
@@ -942,6 +1047,26 @@ describe('BK Library (LBMS) API Test Suite', () => {
                     body: JSON.stringify({ name: 'Trí tuệ nhân tạo' }),
                 });
                 assert.equal(resAdmin.status, 201);
+
+                // LIBRARIAN thực hiện cho mượn sách thành công từ Dashboard
+                const originalCreateBorrow = borrowRepository.createBorrow;
+                let capturedBorrowPayload = null;
+                borrowRepository.createBorrow = async (payload) => {
+                    capturedBorrowPayload = payload;
+                    return { id: 88, status: 'BORROWED' };
+                };
+                const resBorrow = await fetch(`${baseUrl}/api/borrows/checkout`, {
+                    method: 'POST',
+                    headers: librarianHeaders,
+                    body: JSON.stringify({
+                        userCode: '2311159',
+                        barcode: 'BC-SE-001',
+                    }),
+                });
+                assert.equal(resBorrow.status, 201);
+                assert.equal(capturedBorrowPayload.userCode, '2311159');
+                assert.equal(capturedBorrowPayload.librarianCode, 'TT001');
+                borrowRepository.createBorrow = originalCreateBorrow;
             } finally {
                 categoryRepository.create = originalCreateCat;
                 categoryRepository.findByName = originalFindByName;

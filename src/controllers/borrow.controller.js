@@ -19,13 +19,13 @@ const borrowController = {
 
     borrowBook: asyncHandler(async (req, res) => {
         const payload = { ...req.body };
-        // Độc giả chỉ được phép mượn cho chính tài khoản của mình
-        if (req.user && ['STUDENT', 'LECTURER'].includes(req.user.role)) {
-            if (payload.userCode && payload.userCode !== req.user.userCode) {
-                throw new HttpError(403, 'Bạn chỉ có quyền mượn sách cho chính tài khoản của mình.');
-            }
-            payload.userCode = req.user.userCode;
-        } else if (req.user && ['LIBRARIAN', 'ADMIN'].includes(req.user.role)) {
+        // Chỉ Thủ thư (LIBRARIAN) hoặc Quản trị viên (ADMIN) mới được quyền thực hiện cho mượn sách
+        if (req.user && !['LIBRARIAN', 'ADMIN'].includes(req.user.role)) {
+            throw new HttpError(403, 'Bạn không có quyền thực hiện hành động này. Thao tác cho mượn sách chỉ dành cho Thủ thư hoặc Quản trị viên.');
+        }
+
+        // Tự động gán mã thủ thư thực hiện giao dịch từ tài khoản đang đăng nhập
+        if (req.user && ['LIBRARIAN', 'ADMIN'].includes(req.user.role)) {
             payload.librarianCode = payload.librarianCode || req.user.userCode;
         }
         const data = await borrowService.borrowBook(payload);

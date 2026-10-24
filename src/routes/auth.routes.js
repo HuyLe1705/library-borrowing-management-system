@@ -55,9 +55,9 @@ const router = express.Router();
  *                 description: "Số điện thoại liên hệ"
  *               role:
  *                 type: string
- *                 enum: [STUDENT, LECTURER]
+ *                 enum: [STUDENT, LECTURER, LIBRARIAN, ADMIN]
  *                 default: STUDENT
- *                 description: "Vai trò người dùng (mặc định STUDENT)"
+ *                 description: "Vai trò người dùng (STUDENT, LECTURER, LIBRARIAN, ADMIN - mặc định STUDENT)"
  *     responses:
  *       201:
  *         description: Đăng ký tài khoản thành công, trả về JWT Token và thông tin người dùng.
