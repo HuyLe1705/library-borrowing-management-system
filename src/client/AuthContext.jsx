@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Hàm Đăng ký: nhận { username, password, fullName, email, userCode, phone }
+    // Hàm Đăng ký: nhận { username, password, fullName, email, userCode, phone, role }
     const register = async (userData) => {
         setLoading(true);
         setError(null);
