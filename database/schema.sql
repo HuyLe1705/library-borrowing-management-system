@@ -1,3 +1,5 @@
+IF OBJECT_ID('dbo.activity_logs', 'U') IS NOT NULL DROP TABLE dbo.activity_logs;
+IF OBJECT_ID('dbo.borrow_requests', 'U') IS NOT NULL DROP TABLE dbo.borrow_requests;
 IF OBJECT_ID('dbo.fines', 'U') IS NOT NULL DROP TABLE dbo.fines;
 IF OBJECT_ID('dbo.borrow_records', 'U') IS NOT NULL DROP TABLE dbo.borrow_records;
 IF OBJECT_ID('dbo.book_copies', 'U') IS NOT NULL DROP TABLE dbo.book_copies;
@@ -81,6 +83,38 @@ CREATE TABLE dbo.fines (
     status VARCHAR(20) NOT NULL DEFAULT 'UNPAID' CHECK (status IN ('UNPAID', 'PAID')),
     created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     paid_at DATETIME2 NULL
+);
+
+-- 7. BẢNG BORROW_REQUESTS (Độc giả đăng ký mượn sách trước / Giữ chỗ)
+CREATE TABLE dbo.borrow_requests (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES dbo.users(id),
+    book_id INT NOT NULL REFERENCES dbo.books(id),
+    copy_id INT NULL REFERENCES dbo.book_copies(id),
+    request_date DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    expected_pickup_date DATE NULL,
+    pickup_deadline DATE NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'FULFILLED', 'CANCELLED')),
+    note NVARCHAR(500) NULL,
+    admin_note NVARCHAR(500) NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+);
+
+-- 8. BẢNG ACTIVITY_LOGS (Ghi lại lịch sử hoạt động hệ thống: mượn, trả, phạt, yêu cầu mượn)
+CREATE TABLE dbo.activity_logs (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    action VARCHAR(50) NOT NULL,
+    user_id INT NULL REFERENCES dbo.users(id),
+    user_code VARCHAR(20) NULL,
+    user_name NVARCHAR(100) NULL,
+    user_role VARCHAR(20) NULL,
+    target_type VARCHAR(50) NULL,
+    target_id INT NULL,
+    details NVARCHAR(MAX) NULL,
+    ip_address VARCHAR(50) NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 GO
 
@@ -225,4 +259,16 @@ INSERT INTO dbo.borrow_records (copy_id, borrower_id, librarian_id, borrow_date,
 -- 6. Thêm Phiếu phạt mẫu (Ứng với giao dịch số 5 của Nguyễn Văn A)
 INSERT INTO dbo.fines (borrow_record_id, librarian_id, overdue_days, amount, reason, status, paid_at) VALUES
 (5, 2, 5, 25000.00, N'Trả sách quá hạn 5 ngày (BC-AI-001)', 'UNPAID', NULL);
+
+-- 7. Thêm Yêu cầu mượn sách mẫu (Borrow Requests)
+INSERT INTO dbo.borrow_requests (user_id, book_id, copy_id, request_date, expected_pickup_date, pickup_deadline, status, note, admin_note) VALUES
+(4, 3, NULL, DATEADD(HOUR, -2, SYSDATETIME()), DATEADD(DAY, 2, CAST(SYSDATETIME() AS DATE)), NULL, 'PENDING', N'Cần mượn làm đồ án môn học', NULL),
+(3, 11, 19, DATEADD(DAY, -1, SYSDATETIME()), DATEADD(DAY, 1, CAST(SYSDATETIME() AS DATE)), DATEADD(DAY, 3, CAST(SYSDATETIME() AS DATE)), 'APPROVED', N'Giảng viên mượn tham khảo giảng dạy', N'Đã chuẩn bị sách tại quầy');
+
+-- 8. Thêm Nhật ký hoạt động mẫu (Activity Logs)
+INSERT INTO dbo.activity_logs (action, user_id, user_code, user_name, user_role, target_type, target_id, details, ip_address, created_at) VALUES
+('BORROW', 2, 'TT001', N'Nguyễn Thị Thủ Thư', 'LIBRARIAN', 'BORROW_RECORD', 1, N'Thủ thư TT001 cho độc giả SV001 mượn sách BC-SE-001', '127.0.0.1', DATEADD(DAY, -20, SYSDATETIME())),
+('RETURN', 2, 'TT001', N'Nguyễn Thị Thủ Thư', 'LIBRARIAN', 'BORROW_RECORD', 1, N'Độc giả SV001 trả sách BC-SE-001 đúng hạn', '127.0.0.1', DATEADD(DAY, -8, SYSDATETIME())),
+('BORROW', 2, 'TT001', N'Nguyễn Thị Thủ Thư', 'LIBRARIAN', 'BORROW_RECORD', 3, N'Thủ thư TT001 cho độc giả SV001 mượn sách BC-DB-002', '127.0.0.1', DATEADD(DAY, -25, SYSDATETIME())),
+('BORROW_REQUEST', 4, 'SV001', N'Nguyễn Văn A', 'STUDENT', 'BORROW_REQUEST', 1, N'Độc giả SV001 gửi yêu cầu mượn sách The Pragmatic Programmer', '127.0.0.1', DATEADD(HOUR, -2, SYSDATETIME()));
 GO

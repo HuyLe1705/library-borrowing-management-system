@@ -7,6 +7,9 @@ const categoryRoutes = require('./category.routes');
 const borrowRoutes = require('./borrow.routes');
 const authRoutes = require('./auth.routes');
 const uploadRoutes = require('./upload.routes');
+const dashboardRoutes = require('./dashboard.routes');
+const borrowRequestRoutes = require('./borrowRequest.routes');
+const activityLogRoutes = require('./activityLog.routes');
 
 const router = express.Router();
 
@@ -30,6 +33,10 @@ const swaggerOptions = {
         ],
         tags: [
             {
+                name: 'Dashboard',
+                description: 'Thống kê tổng quan KPI và số liệu biểu đồ mượn/trả thư viện',
+            },
+            {
                 name: 'Books',
                 description: 'Quản lý đầu sách, tìm kiếm, phân trang và bản sao sách vật lý',
             },
@@ -39,7 +46,15 @@ const swaggerOptions = {
             },
             {
                 name: 'Borrows',
-                description: 'Quy trình mượn sách (Checkout), trả sách (Return), gia hạn (Renew) và thanh toán tiền phạt (Fines)',
+                description: 'Quy trình mượn sách (Checkout), trả sách (Return), gia hạn (Renew), quá hạn (Overdue) và nộp phạt (Fines)',
+            },
+            {
+                name: 'BorrowRequests',
+                description: 'Quản lý yêu cầu đăng ký mượn sách (Reservation / Request) của độc giả',
+            },
+            {
+                name: 'ActivityLogs',
+                description: 'Nhật ký theo dõi các hoạt động trong hệ thống thư viện',
             },
             {
                 name: 'Auth',
@@ -156,6 +171,128 @@ const swaggerOptions = {
                         fineStatus: { type: 'string', nullable: true, example: null },
                     },
                 },
+                OverdueBorrow: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer', example: 3 },
+                        borrowDate: { type: 'string', format: 'date', example: '2026-09-30' },
+                        dueDate: { type: 'string', format: 'date', example: '2026-10-14' },
+                        returnDate: { type: 'string', format: 'date', nullable: true, example: null },
+                        renewalCount: { type: 'integer', example: 1 },
+                        status: { type: 'string', example: 'OVERDUE' },
+                        overdueDays: { type: 'integer', example: 11 },
+                        estimatedFine: { type: 'number', example: 55000 },
+                        reader: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'integer', example: 4 },
+                                userCode: { type: 'string', example: 'SV001' },
+                                fullName: { type: 'string', example: 'Nguyễn Văn A' },
+                                email: { type: 'string', example: 'nguyenvana@student.edu.vn' },
+                                phone: { type: 'string', example: '0903000001' },
+                                role: { type: 'string', example: 'STUDENT' },
+                                status: { type: 'string', example: 'ACTIVE' },
+                            },
+                        },
+                        book: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'integer', example: 6 },
+                                title: { type: 'string', example: 'Database System Concepts' },
+                                author: { type: 'string', example: 'Abraham Silberschatz' },
+                                barcode: { type: 'string', example: 'BC-DB-002' },
+                                shelfLocation: { type: 'string', example: 'Kệ CSDL - Tầng 2 - Ô B1' },
+                                coverUrl: { type: 'string', example: 'https://covers.openlibrary.org/b/isbn/9780078022159-L.jpg' },
+                            },
+                        },
+                    },
+                },
+                BorrowRequest: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer', example: 1 },
+                        userId: { type: 'integer', example: 4 },
+                        borrowerCode: { type: 'string', example: 'SV001' },
+                        borrowerName: { type: 'string', example: 'Nguyễn Văn A' },
+                        bookId: { type: 'integer', example: 2 },
+                        bookTitle: { type: 'string', example: 'Clean Code' },
+                        copyId: { type: 'integer', nullable: true, example: 3 },
+                        barcode: { type: 'string', nullable: true, example: 'BC-SE-003' },
+                        note: { type: 'string', example: 'Cần mượn làm bài tập nhóm' },
+                        status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'FULFILLED', 'CANCELLED'], example: 'PENDING' },
+                        expectedPickupDate: { type: 'string', format: 'date', nullable: true, example: '2026-10-28' },
+                        pickupDeadline: { type: 'string', format: 'date', nullable: true, example: '2026-10-31' },
+                        adminNote: { type: 'string', nullable: true, example: null },
+                        requestDate: { type: 'string', format: 'date-time', example: '2026-10-25T13:00:00.000Z' },
+                    },
+                },
+                ActivityLog: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer', example: 1 },
+                        action: { type: 'string', example: 'BORROW' },
+                        userId: { type: 'integer', nullable: true, example: 2 },
+                        userCode: { type: 'string', example: 'TT001' },
+                        userName: { type: 'string', example: 'Nguyễn Thị Thủ Thư' },
+                        userRole: { type: 'string', example: 'LIBRARIAN' },
+                        targetType: { type: 'string', example: 'BORROW_RECORD' },
+                        targetId: { type: 'integer', example: 10 },
+                        details: { type: 'string', example: 'Cho độc giả SV001 mượn sách BC-SE-001' },
+                        ipAddress: { type: 'string', nullable: true, example: '127.0.0.1' },
+                        createdAt: { type: 'string', format: 'date-time', example: '2026-10-25T13:30:00.000Z' },
+                    },
+                },
+                DashboardSummary: {
+                    type: 'object',
+                    properties: {
+                        totalBooks: { type: 'integer', example: 30 },
+                        totalCopies: { type: 'integer', example: 40 },
+                        availableCopies: { type: 'integer', example: 35 },
+                        totalReaders: { type: 'integer', example: 3 },
+                        borrowedBooks: { type: 'integer', example: 2 },
+                        overdueBooks: { type: 'integer', example: 1 },
+                        totalBorrowTransactions: { type: 'integer', example: 5 },
+                        unpaidFinesCount: { type: 'integer', example: 1 },
+                        totalUnpaidFineAmount: { type: 'number', example: 25000 },
+                        pendingRequests: { type: 'integer', example: 2 },
+                    },
+                },
+                DashboardStatistics: {
+                    type: 'object',
+                    properties: {
+                        period: { type: 'string', example: 'day' },
+                        from: { type: 'string', example: '2026-10-19' },
+                        to: { type: 'string', example: '2026-10-25' },
+                        summary: {
+                            type: 'object',
+                            properties: {
+                                totalBorrows: { type: 'integer', example: 25 },
+                                totalReturns: { type: 'integer', example: 20 },
+                            },
+                        },
+                        series: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    date: { type: 'string', example: '2026-10-25' },
+                                    label: { type: 'string', example: '25/10' },
+                                    borrows: { type: 'integer', example: 4 },
+                                    returns: { type: 'integer', example: 3 },
+                                },
+                            },
+                        },
+                    },
+                },
+                Pagination: {
+                    type: 'object',
+                    properties: {
+                        page: { type: 'integer', example: 1 },
+                        size: { type: 'integer', example: 20 },
+                        total: { type: 'integer', example: 50 },
+                        totalPages: { type: 'integer', example: 3 },
+                    },
+                },
             },
         },
     },
@@ -190,6 +327,10 @@ router.get('/', (req, res) => {
             books: '/api/books',
             categories: '/api/categories',
             borrows: '/api/borrows',
+            borrowings: '/api/borrowings',
+            borrowRequests: '/api/borrow-requests',
+            dashboard: '/api/dashboard',
+            activityLogs: '/api/activity-logs',
         },
     });
 });
@@ -199,5 +340,10 @@ router.use('/upload', uploadRoutes);
 router.use('/books', bookRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/borrows', borrowRoutes);
+router.use('/borrowings', borrowRoutes);
+router.use('/borrow-requests', borrowRequestRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/activity-logs', activityLogRoutes);
+router.use('/activities', activityLogRoutes);
 
 module.exports = router;
