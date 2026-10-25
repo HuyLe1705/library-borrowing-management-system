@@ -1,5 +1,6 @@
 const express = require('express');
 const borrowController = require('../controllers/borrow.controller');
+const borrowRequestController = require('../controllers/borrowRequest.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
@@ -47,6 +48,50 @@ const router = express.Router();
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/BorrowRecord'
+ *
+ * /api/borrows/overdue:
+ *   get:
+ *     summary: Lấy danh sách giao dịch mượn quá hạn (Overdue)
+ *     description: Lấy danh sách các phiếu mượn sách đang quá hạn, bao gồm thông tin chi tiết độc giả, sách, barcode, hạn trả, số ngày quá hạn và tiền phạt dự kiến. Độc giả xem sách quá hạn của chính mình; Thủ thư/Admin xem toàn hệ thống.
+ *     tags: [Borrows]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: userCode
+ *         schema:
+ *           type: string
+ *         example: "SV001"
+ *         description: Lọc theo mã độc giả
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách giao dịch mượn quá hạn thành công.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Lấy danh sách giao dịch mượn quá hạn thành công."
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/OverdueBorrow'
+ *
+ * /api/borrowings/overdue:
+ *   get:
+ *     summary: Lấy danh sách giao dịch mượn quá hạn (Alias URL cho /api/borrows/overdue)
+ *     description: Endpoint tương đương /api/borrows/overdue để tương thích các client gọi /api/borrowings/overdue.
+ *     tags: [Borrows]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách giao dịch mượn quá hạn thành công.
  *
  * /api/borrows/checkout:
  *   post:
@@ -309,6 +354,9 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+router.get('/overdue', authenticate, borrowController.getOverdueBorrows);
+router.get('/requests', authenticate, borrowRequestController.getRequests);
+router.post('/request', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowRequestController.createRequest);
 router.get('/', authenticate, borrowController.getBorrows);
 router.post('/checkout', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.borrowBook);
 router.post('/return', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.returnBook);

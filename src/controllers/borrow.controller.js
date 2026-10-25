@@ -17,6 +17,20 @@ const borrowController = {
         });
     }),
 
+    getOverdueBorrows: asyncHandler(async (req, res) => {
+        const query = { ...req.query };
+        // Nếu là độc giả, chỉ xem các sách quá hạn của chính mình
+        if (req.user && ['STUDENT', 'LECTURER'].includes(req.user.role)) {
+            query.userCode = req.user.userCode;
+        }
+        const data = await borrowService.getOverdueBorrows(query);
+        res.status(200).json({
+            success: true,
+            message: 'Lấy danh sách giao dịch mượn quá hạn thành công.',
+            data,
+        });
+    }),
+
     borrowBook: asyncHandler(async (req, res) => {
         const payload = { ...req.body };
         // Chỉ Thủ thư (LIBRARIAN) hoặc Quản trị viên (ADMIN) mới được quyền thực hiện cho mượn sách
@@ -28,7 +42,7 @@ const borrowController = {
         if (req.user && ['LIBRARIAN', 'ADMIN'].includes(req.user.role)) {
             payload.librarianCode = payload.librarianCode || req.user.userCode;
         }
-        const data = await borrowService.borrowBook(payload);
+        const data = await borrowService.borrowBook(payload, req.user);
         res.status(201).json({
             success: true,
             message: 'Ghi nhận mượn sách thành công.',
@@ -41,7 +55,7 @@ const borrowController = {
         if (req.user && ['LIBRARIAN', 'ADMIN'].includes(req.user.role)) {
             payload.librarianCode = payload.librarianCode || req.user.userCode;
         }
-        const data = await borrowService.returnBook(payload);
+        const data = await borrowService.returnBook(payload, req.user);
         res.status(200).json({
             success: true,
             message: data.fine
@@ -61,7 +75,7 @@ const borrowController = {
     }),
 
     payFine: asyncHandler(async (req, res) => {
-        const data = await borrowService.payFine(req.params.id);
+        const data = await borrowService.payFine(req.params.id, req.user);
         res.status(200).json({
             success: true,
             message: 'Ghi nhận thanh toán tiền phạt và mở khóa thẻ thành công.',

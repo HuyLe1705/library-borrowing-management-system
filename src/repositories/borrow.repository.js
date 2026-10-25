@@ -63,6 +63,100 @@ const borrowRepository = {
         return result.recordset;
     },
 
+    // Lấy danh sách giao dịch mượn quá hạn (kèm thông tin độc giả, sách, hạn trả và số ngày quá hạn)
+    async findOverdue({ userCode } = {}) {
+        const pool = await getPool();
+        const request = pool.request();
+
+        // 1. Tự động đồng bộ trạng thái OVERDUE cho các phiếu đã quá hạn
+        await pool.request().query(`
+            UPDATE dbo.borrow_records
+            SET status = 'OVERDUE'
+            WHERE status = 'BORROWED' AND due_date < CAST(SYSDATETIME() AS DATE);
+        `);
+
+        const conditions = [
+            `(br.status = 'OVERDUE' OR (br.status = 'BORROWED' AND br.due_date < CAST(SYSDATETIME() AS DATE)))`
+        ];
+
+        if (userCode) {
+            request.input('userCode', sql.VarChar, String(userCode).trim());
+            conditions.push(`u.user_code = @userCode`);
+        }
+
+        const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+        const result = await request.query(`
+            SELECT
+                br.id,
+                br.borrow_date AS borrowDate,
+                br.due_date AS dueDate,
+                br.return_date AS returnDate,
+                br.renewal_count AS renewalCount,
+                'OVERDUE' AS status,
+                DATEDIFF(DAY, br.due_date, CAST(SYSDATETIME() AS DATE)) AS overdueDays,
+                u.id AS borrowerId,
+                u.user_code AS borrowerCode,
+                u.full_name AS borrowerName,
+                u.email AS borrowerEmail,
+                u.phone AS borrowerPhone,
+                u.role AS borrowerRole,
+                u.status AS borrowerStatus,
+                bc.id AS copyId,
+                bc.barcode,
+                bc.shelf_location AS shelfLocation,
+                b.id AS bookId,
+                b.title AS bookTitle,
+                b.author AS bookAuthor,
+                b.cover_url AS coverUrl,
+                f.id AS fineId,
+                f.amount AS fineAmount,
+                f.status AS fineStatus
+            FROM dbo.borrow_records br
+            INNER JOIN dbo.users u ON u.id = br.borrower_id
+            INNER JOIN dbo.book_copies bc ON bc.id = br.copy_id
+            INNER JOIN dbo.books b ON b.id = bc.book_id
+            LEFT JOIN dbo.fines f ON f.borrow_record_id = br.id
+            ${whereClause}
+            ORDER BY br.due_date ASC;
+        `);
+
+        return result.recordset.map((row) => ({
+            id: row.id,
+            borrowDate: row.borrowDate,
+            dueDate: row.dueDate,
+            returnDate: row.returnDate,
+            renewalCount: row.renewalCount,
+            status: 'OVERDUE',
+            overdueDays: Math.max(1, row.overdueDays),
+            estimatedFine: row.fineAmount || (Math.max(1, row.overdueDays) * FINE_PER_DAY),
+            reader: {
+                id: row.borrowerId,
+                userCode: row.borrowerCode,
+                fullName: row.borrowerName,
+                email: row.borrowerEmail,
+                phone: row.borrowerPhone,
+                role: row.borrowerRole,
+                status: row.borrowerStatus,
+            },
+            book: {
+                id: row.bookId,
+                title: row.bookTitle,
+                author: row.bookAuthor,
+                barcode: row.barcode,
+                shelfLocation: row.shelfLocation,
+                coverUrl: row.coverUrl,
+            },
+            borrowerCode: row.borrowerCode,
+            borrowerName: row.borrowerName,
+            barcode: row.barcode,
+            bookTitle: row.bookTitle,
+            fineId: row.fineId,
+            fineAmount: row.fineAmount,
+            fineStatus: row.fineStatus,
+        }));
+    },
+
     // Thực hiện Mượn sách (Theo userCode và barcode cuốn sách)
     async createBorrow({ userCode, barcode, librarianCode }) {
         const pool = await getPool();

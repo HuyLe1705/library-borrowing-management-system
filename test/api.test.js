@@ -9,6 +9,9 @@ const bookRepository = require('../src/repositories/book.repository');
 const categoryRepository = require('../src/repositories/category.repository');
 const borrowRepository = require('../src/repositories/borrow.repository');
 const userRepository = require('../src/repositories/user.repository');
+const dashboardRepository = require('../src/repositories/dashboard.repository');
+const borrowRequestRepository = require('../src/repositories/borrowRequest.repository');
+const activityLogRepository = require('../src/repositories/activityLog.repository');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'lbms_default_jwt_secret_key_2026';
 
@@ -1112,6 +1115,561 @@ describe('BK Library (LBMS) API Test Suite', () => {
             }
         });
     });
+
+    // =========================================================================
+    // 9. KIỂM THỬ DASHBOARD SUMMARY & STATISTICS (/api/dashboard)
+    // =========================================================================
+    describe('9. Dashboard Summary & Statistics API (/api/dashboard)', () => {
+        test('GET /api/dashboard/summary - Trả về 200 cho LIBRARIAN và ADMIN với đầy đủ các chỉ số', async () => {
+            const originalSummary = dashboardRepository.getSummary;
+            dashboardRepository.getSummary = async () => ({
+                totalBooks: 30,
+                totalCopies: 40,
+                availableCopies: 35,
+                totalReaders: 3,
+                borrowedBooks: 2,
+                overdueBooks: 1,
+                totalBorrowTransactions: 5,
+                unpaidFinesCount: 1,
+                totalUnpaidFineAmount: 25000,
+                pendingRequests: 2,
+            });
+
+            try {
+                // LIBRARIAN gọi thành công
+                const resLib = await fetch(`${baseUrl}/api/dashboard/summary`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(resLib.status, 200);
+                const bodyLib = await resLib.json();
+                assert.equal(bodyLib.success, true);
+                assert.equal(bodyLib.data.totalBooks, 30);
+                assert.equal(bodyLib.data.totalReaders, 3);
+                assert.equal(bodyLib.data.borrowedBooks, 2);
+                assert.equal(bodyLib.data.overdueBooks, 1);
+                assert.equal(bodyLib.data.totalUnpaidFineAmount, 25000);
+
+                // ADMIN gọi thành công
+                const resAdmin = await fetch(`${baseUrl}/api/dashboard/summary`, {
+                    headers: adminHeaders,
+                });
+                assert.equal(resAdmin.status, 200);
+            } finally {
+                dashboardRepository.getSummary = originalSummary;
+            }
+        });
+
+        test('GET /api/dashboard/summary - Chặn 403 Forbidden đối với độc giả (STUDENT)', async () => {
+            const res = await fetch(`${baseUrl}/api/dashboard/summary`, {
+                headers: studentHeaders,
+            });
+            assert.equal(res.status, 403);
+            const body = await res.json();
+            assert.equal(body.success, false);
+            assert.ok(body.message.includes('Bạn không có quyền'));
+        });
+
+        test('GET /api/dashboard/summary - Chặn 401 Unauthorized khi không có token', async () => {
+            const res = await fetch(`${baseUrl}/api/dashboard/summary`);
+            assert.equal(res.status, 401);
+        });
+
+        test('GET /api/dashboard/statistics - Thống kê số lượt mượn/trả theo ngày (period=day)', async () => {
+            const originalStats = dashboardRepository.getStatistics;
+            dashboardRepository.getStatistics = async ({ period, days }) => ({
+                period: 'day',
+                from: '2026-10-19',
+                to: '2026-10-25',
+                summary: { totalBorrows: 10, totalReturns: 8 },
+                series: [
+                    { date: '2026-10-24', label: '24/10', borrows: 4, returns: 3 },
+                    { date: '2026-10-25', label: '25/10', borrows: 6, returns: 5 },
+                ],
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/dashboard/statistics?period=day&days=7`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.period, 'day');
+                assert.equal(body.data.summary.totalBorrows, 10);
+                assert.equal(body.data.series.length, 2);
+            } finally {
+                dashboardRepository.getStatistics = originalStats;
+            }
+        });
+
+        test('GET /api/dashboard/statistics - Thống kê số lượt mượn/trả theo tháng (period=month)', async () => {
+            const originalStats = dashboardRepository.getStatistics;
+            dashboardRepository.getStatistics = async ({ period, year }) => ({
+                period: 'month',
+                year: 2026,
+                summary: { totalBorrows: 120, totalReturns: 110 },
+                series: [
+                    { period: '2026-01', label: 'Tháng 01/2026', month: 1, year: 2026, borrows: 10, returns: 8 },
+                    { period: '2026-02', label: 'Tháng 02/2026', month: 2, year: 2026, borrows: 15, returns: 12 },
+                ],
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/dashboard/statistics?period=month&year=2026`, {
+                    headers: adminHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.period, 'month');
+                assert.equal(body.data.year, 2026);
+                assert.equal(body.data.series.length, 2);
+            } finally {
+                dashboardRepository.getStatistics = originalStats;
+            }
+        });
+
+        test('GET /api/dashboard/statistics - Báo lỗi 400 khi period hoặc month không hợp lệ', async () => {
+            const resBadPeriod = await fetch(`${baseUrl}/api/dashboard/statistics?period=nam`, {
+                headers: librarianHeaders,
+            });
+            assert.equal(resBadPeriod.status, 400);
+
+            const resBadMonth = await fetch(`${baseUrl}/api/dashboard/statistics?period=day&month=13`, {
+                headers: librarianHeaders,
+            });
+            assert.equal(resBadMonth.status, 400);
+        });
+
+        test('GET /api/dashboard/activities - Trả về danh sách hoạt động gần nhất', async () => {
+            const originalRecent = activityLogRepository.getRecent;
+            activityLogRepository.getRecent = async (limit) => [
+                { id: 1, action: 'BORROW', details: 'Thủ thư cho mượn sách', createdAt: '2026-10-25T12:00:00Z' },
+            ];
+
+            try {
+                const res = await fetch(`${baseUrl}/api/dashboard/activities?limit=5`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.length, 1);
+            } finally {
+                activityLogRepository.getRecent = originalRecent;
+            }
+        });
+    });
+
+    // =========================================================================
+    // 10. KIỂM THỬ OVERDUE BORROWINGS (/api/borrowings/overdue & /api/borrows/overdue)
+    // =========================================================================
+    describe('10. Overdue Borrowings API (/api/borrowings/overdue & /api/borrows/overdue)', () => {
+        const mockOverdueData = [
+            {
+                id: 3,
+                borrowDate: '2026-09-30',
+                dueDate: '2026-10-14',
+                returnDate: null,
+                renewalCount: 1,
+                status: 'OVERDUE',
+                overdueDays: 11,
+                estimatedFine: 55000,
+                reader: {
+                    id: 4,
+                    userCode: 'SV001',
+                    fullName: 'Nguyễn Văn A',
+                    email: 'nguyenvana@student.edu.vn',
+                    phone: '0903000001',
+                    role: 'STUDENT',
+                },
+                book: {
+                    id: 6,
+                    title: 'Database System Concepts',
+                    author: 'Abraham Silberschatz',
+                    barcode: 'BC-DB-002',
+                    shelfLocation: 'Kệ CSDL - Tầng 2 - Ô B1',
+                },
+                borrowerCode: 'SV001',
+                borrowerName: 'Nguyễn Văn A',
+                barcode: 'BC-DB-002',
+                bookTitle: 'Database System Concepts',
+            },
+        ];
+
+        test('GET /api/borrowings/overdue - Lấy danh sách giao dịch mượn quá hạn thành công cho LIBRARIAN', async () => {
+            const originalFindOverdue = borrowRepository.findOverdue;
+            borrowRepository.findOverdue = async () => mockOverdueData;
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrowings/overdue`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.length, 1);
+                assert.equal(body.data[0].status, 'OVERDUE');
+                assert.equal(body.data[0].overdueDays, 11);
+                assert.equal(body.data[0].estimatedFine, 55000);
+                assert.ok(body.data[0].reader);
+                assert.equal(body.data[0].reader.userCode, 'SV001');
+                assert.ok(body.data[0].book);
+                assert.equal(body.data[0].book.barcode, 'BC-DB-002');
+            } finally {
+                borrowRepository.findOverdue = originalFindOverdue;
+            }
+        });
+
+        test('GET /api/borrows/overdue - Endpoint alias trả về dữ liệu tương đương', async () => {
+            const originalFindOverdue = borrowRepository.findOverdue;
+            borrowRepository.findOverdue = async () => mockOverdueData;
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrows/overdue`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.length, 1);
+            } finally {
+                borrowRepository.findOverdue = originalFindOverdue;
+            }
+        });
+
+        test('GET /api/borrowings/overdue - Tự động filter theo mã của độc giả khi STUDENT gọi', async () => {
+            const originalFindOverdue = borrowRepository.findOverdue;
+            let capturedUserCode = null;
+            borrowRepository.findOverdue = async ({ userCode }) => {
+                capturedUserCode = userCode;
+                return mockOverdueData;
+            };
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrowings/overdue?userCode=OTHER_CODE`, {
+                    headers: studentHeaders, // token có userCode = '2311159'
+                });
+                assert.equal(res.status, 200);
+                assert.equal(capturedUserCode, '2311159');
+            } finally {
+                borrowRepository.findOverdue = originalFindOverdue;
+            }
+        });
+
+        test('GET /api/borrowings/overdue - Chặn 401 khi không đăng nhập', async () => {
+            const res = await fetch(`${baseUrl}/api/borrowings/overdue`);
+            assert.equal(res.status, 401);
+        });
+    });
+
+    // =========================================================================
+    // 11. KIỂM THỬ READER BORROW REQUESTS API (/api/borrow-requests)
+    // =========================================================================
+    describe('11. Reader Borrow Requests API (/api/borrow-requests)', () => {
+        test('POST /api/borrow-requests - Độc giả (STUDENT) tạo yêu cầu mượn sách thành công (201 Created)', async () => {
+            const originalFindBook = bookRepository.findById;
+            const originalFindActive = borrowRequestRepository.findActiveByUserAndBook;
+            const originalCreateReq = borrowRequestRepository.create;
+
+            bookRepository.findById = async (id) => ({ id, title: 'Clean Code', author: 'Robert C. Martin' });
+            borrowRequestRepository.findActiveByUserAndBook = async () => null;
+            borrowRequestRepository.create = async (payload) => ({
+                id: 101,
+                userId: payload.userId,
+                bookId: payload.bookId,
+                status: 'PENDING',
+                note: payload.note,
+                requestDate: '2026-10-25T13:00:00Z',
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrow-requests`, {
+                    method: 'POST',
+                    headers: studentHeaders,
+                    body: JSON.stringify({
+                        bookId: 2,
+                        note: 'Cần mượn làm đồ án kỳ 1',
+                        expectedPickupDate: '2026-10-30',
+                    }),
+                });
+
+                assert.equal(res.status, 201);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.id, 101);
+                assert.equal(body.data.status, 'PENDING');
+                assert.equal(body.data.bookTitle, 'Clean Code');
+            } finally {
+                bookRepository.findById = originalFindBook;
+                borrowRequestRepository.findActiveByUserAndBook = originalFindActive;
+                borrowRequestRepository.create = originalCreateReq;
+            }
+        });
+
+        test('POST /api/borrows/request - Endpoint alias tạo yêu cầu mượn thành công', async () => {
+            const originalFindBook = bookRepository.findById;
+            const originalFindActive = borrowRequestRepository.findActiveByUserAndBook;
+            const originalCreateReq = borrowRequestRepository.create;
+
+            bookRepository.findById = async (id) => ({ id, title: 'The Pragmatic Programmer' });
+            borrowRequestRepository.findActiveByUserAndBook = async () => null;
+            borrowRequestRepository.create = async (payload) => ({
+                id: 102,
+                userId: payload.userId,
+                bookId: payload.bookId,
+                status: 'PENDING',
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrows/request`, {
+                    method: 'POST',
+                    headers: studentHeaders,
+                    body: JSON.stringify({ bookId: 3 }),
+                });
+
+                assert.equal(res.status, 201);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.id, 102);
+            } finally {
+                bookRepository.findById = originalFindBook;
+                borrowRequestRepository.findActiveByUserAndBook = originalFindActive;
+                borrowRequestRepository.create = originalCreateReq;
+            }
+        });
+
+        test('POST /api/borrow-requests - Báo lỗi 400 khi thiếu bookId', async () => {
+            const res = await fetch(`${baseUrl}/api/borrow-requests`, {
+                method: 'POST',
+                headers: studentHeaders,
+                body: JSON.stringify({ note: 'Thiếu bookId' }),
+            });
+            assert.equal(res.status, 400);
+            const body = await res.json();
+            assert.ok(body.message.includes('bookId'));
+        });
+
+        test('POST /api/borrow-requests - Báo lỗi 404 khi bookId không tồn tại', async () => {
+            const originalFindBook = bookRepository.findById;
+            bookRepository.findById = async () => null;
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrow-requests`, {
+                    method: 'POST',
+                    headers: studentHeaders,
+                    body: JSON.stringify({ bookId: 99999 }),
+                });
+                assert.equal(res.status, 404);
+            } finally {
+                bookRepository.findById = originalFindBook;
+            }
+        });
+
+        test('GET /api/borrow-requests - Độc giả chỉ xem được yêu cầu của chính mình', async () => {
+            const originalFindAll = borrowRequestRepository.findAll;
+            let capturedUserId = null;
+            borrowRequestRepository.findAll = async ({ userId }) => {
+                capturedUserId = userId;
+                return { items: [], pagination: { page: 1, size: 20, total: 0, totalPages: 1 } };
+            };
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrow-requests?userId=999`, {
+                    headers: studentHeaders,
+                });
+                assert.equal(res.status, 200);
+                assert.equal(capturedUserId, 3); // token student ID = 3
+            } finally {
+                borrowRequestRepository.findAll = originalFindAll;
+            }
+        });
+
+        test('GET /api/borrow-requests - Thủ thư có thể xem toàn bộ yêu cầu và lọc theo status', async () => {
+            const originalFindAll = borrowRequestRepository.findAll;
+            let capturedStatus = null;
+            borrowRequestRepository.findAll = async ({ status }) => {
+                capturedStatus = status;
+                return {
+                    items: [{ id: 1, status: 'PENDING', bookTitle: 'Clean Code' }],
+                    pagination: { page: 1, size: 20, total: 1, totalPages: 1 },
+                };
+            };
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrow-requests?status=PENDING`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                assert.equal(capturedStatus, 'PENDING');
+                const body = await res.json();
+                assert.equal(body.data.items.length, 1);
+            } finally {
+                borrowRequestRepository.findAll = originalFindAll;
+            }
+        });
+
+        test('PATCH /api/borrow-requests/:id/cancel - Độc giả tự hủy yêu cầu mượn sách PENDING của mình', async () => {
+            const originalFindById = borrowRequestRepository.findById;
+            const originalUpdate = borrowRequestRepository.updateStatus;
+
+            borrowRequestRepository.findById = async (id) => ({
+                id,
+                userId: 3,
+                borrowerCode: '2311159',
+                status: 'PENDING',
+                bookTitle: 'Clean Code',
+            });
+            borrowRequestRepository.updateStatus = async (id, { status }) => ({ id, status });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/borrow-requests/1/cancel`, {
+                    method: 'PATCH',
+                    headers: studentHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.data.status, 'CANCELLED');
+            } finally {
+                borrowRequestRepository.findById = originalFindById;
+                borrowRequestRepository.updateStatus = originalUpdate;
+            }
+        });
+
+        test('PATCH /api/borrow-requests/:id/status - Thủ thư duyệt (APPROVED) hoặc từ chối (REJECTED) yêu cầu', async () => {
+            const originalFindById = borrowRequestRepository.findById;
+            const originalUpdate = borrowRequestRepository.updateStatus;
+
+            borrowRequestRepository.findById = async (id) => ({
+                id,
+                userId: 4,
+                borrowerCode: 'SV001',
+                status: 'PENDING',
+                bookTitle: 'Clean Code',
+            });
+            borrowRequestRepository.updateStatus = async (id, { status, adminNote }) => ({ id, status, adminNote });
+
+            try {
+                const resApprove = await fetch(`${baseUrl}/api/borrow-requests/1/status`, {
+                    method: 'PATCH',
+                    headers: librarianHeaders,
+                    body: JSON.stringify({ status: 'APPROVED', adminNote: 'Sách sẵn sàng tại quầy' }),
+                });
+                assert.equal(resApprove.status, 200);
+                const bodyApprove = await resApprove.json();
+                assert.equal(bodyApprove.data.status, 'APPROVED');
+
+                // Chặn 403 khi STUDENT cố tình gọi duyệt yêu cầu
+                const resStudentBlocked = await fetch(`${baseUrl}/api/borrow-requests/1/status`, {
+                    method: 'PATCH',
+                    headers: studentHeaders,
+                    body: JSON.stringify({ status: 'APPROVED' }),
+                });
+                assert.equal(resStudentBlocked.status, 403);
+            } finally {
+                borrowRequestRepository.findById = originalFindById;
+                borrowRequestRepository.updateStatus = originalUpdate;
+            }
+        });
+    });
+
+    // =========================================================================
+    // 12. KIỂM THỬ ACTIVITY LOGS API (/api/activity-logs)
+    // =========================================================================
+    describe('12. Activity Logs API (/api/activity-logs)', () => {
+        test('GET /api/activity-logs - Lấy danh sách nhật ký hoạt động có phân trang cho LIBRARIAN', async () => {
+            const originalFindAll = activityLogRepository.findAll;
+            activityLogRepository.findAll = async () => ({
+                items: [
+                    {
+                        id: 1,
+                        action: 'BORROW',
+                        userCode: 'TT001',
+                        targetType: 'BORROW_RECORD',
+                        targetId: 10,
+                        details: 'Cho độc giả 2311159 mượn sách',
+                    },
+                ],
+                pagination: { page: 1, size: 20, total: 1, totalPages: 1 },
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/activity-logs`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.items.length, 1);
+                assert.equal(body.data.items[0].action, 'BORROW');
+            } finally {
+                activityLogRepository.findAll = originalFindAll;
+            }
+        });
+
+        test('GET /api/activity-logs - Chặn 403 Forbidden đối với STUDENT', async () => {
+            const res = await fetch(`${baseUrl}/api/activity-logs`, {
+                headers: studentHeaders,
+            });
+            assert.equal(res.status, 403);
+        });
+
+        test('POST /api/activity-logs - Ghi nhật ký hoạt động mới thành công (201 Created)', async () => {
+            const originalCreate = activityLogRepository.create;
+            activityLogRepository.create = async (payload) => ({
+                id: 10,
+                action: payload.action,
+                userCode: 'ADMIN01',
+                details: payload.details,
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/activity-logs`, {
+                    method: 'POST',
+                    headers: adminHeaders,
+                    body: JSON.stringify({
+                        action: 'SEARCH_CATALOG',
+                        targetType: 'BOOK',
+                        details: 'Tìm kiếm sách Clean Code',
+                    }),
+                });
+                assert.equal(res.status, 201);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.action, 'SEARCH_CATALOG');
+            } finally {
+                activityLogRepository.create = originalCreate;
+            }
+        });
+
+        test('POST /api/activity-logs - Báo lỗi 400 khi thiếu action', async () => {
+            const res = await fetch(`${baseUrl}/api/activity-logs`, {
+                method: 'POST',
+                headers: adminHeaders,
+                body: JSON.stringify({ details: 'Thiếu action' }),
+            });
+            assert.equal(res.status, 400);
+        });
+
+        test('GET /api/activity-logs/recent - Lấy danh sách hoạt động gần nhất', async () => {
+            const originalRecent = activityLogRepository.getRecent;
+            activityLogRepository.getRecent = async (limit) => [
+                { id: 1, action: 'RETURN', details: 'Trả sách đúng hạn' },
+            ];
+
+            try {
+                const res = await fetch(`${baseUrl}/api/activity-logs/recent?limit=5`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.data.length, 1);
+            } finally {
+                activityLogRepository.getRecent = originalRecent;
+            }
+        });
+    });
 });
+
 
 
