@@ -10,6 +10,7 @@ const uploadRoutes = require('./upload.routes');
 const dashboardRoutes = require('./dashboard.routes');
 const borrowRequestRoutes = require('./borrowRequest.routes');
 const activityLogRoutes = require('./activityLog.routes');
+const userRoutes = require('./user.routes');
 
 const router = express.Router();
 
@@ -63,6 +64,10 @@ const swaggerOptions = {
             {
                 name: 'Upload',
                 description: 'Tải ảnh bìa sách lên máy chủ cục bộ (Local Storage)',
+            },
+            {
+                name: 'Users',
+                description: 'Quản lý người dùng: thêm, sửa, xóa, tìm kiếm, đổi vai trò (role) và trạng thái (status)',
             },
             {
                 name: 'System',
@@ -284,6 +289,38 @@ const swaggerOptions = {
                         },
                     },
                 },
+                User: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer', example: 4 },
+                        userCode: { type: 'string', example: 'SV001' },
+                        username: { type: 'string', example: 'nguyen.van.a' },
+                        fullName: { type: 'string', example: 'Nguyễn Văn A' },
+                        email: { type: 'string', example: 'vana.nguyen@example.com' },
+                        phone: { type: 'string', example: '0901234567' },
+                        role: { type: 'string', enum: ['STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'], example: 'STUDENT' },
+                        status: { type: 'string', enum: ['ACTIVE', 'LOCKED'], example: 'ACTIVE' },
+                        createdAt: { type: 'string', format: 'date-time', example: '2026-10-19T08:00:00.000Z' },
+                    },
+                },
+                PaginatedUsers: {
+                    type: 'object',
+                    properties: {
+                        items: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/User' },
+                        },
+                        pagination: {
+                            type: 'object',
+                            properties: {
+                                page: { type: 'integer', example: 1 },
+                                size: { type: 'integer', example: 10 },
+                                total: { type: 'integer', example: 25 },
+                                totalPages: { type: 'integer', example: 3 },
+                            },
+                        },
+                    },
+                },
                 Pagination: {
                     type: 'object',
                     properties: {
@@ -331,6 +368,7 @@ router.get('/', (req, res) => {
             borrowRequests: '/api/borrow-requests',
             dashboard: '/api/dashboard',
             activityLogs: '/api/activity-logs',
+            users: '/api/users',
         },
     });
 });
@@ -345,5 +383,6 @@ router.use('/borrow-requests', borrowRequestRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/activity-logs', activityLogRoutes);
 router.use('/activities', activityLogRoutes);
+router.use('/users', userRoutes);
 
 module.exports = router;

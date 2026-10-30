@@ -113,6 +113,10 @@ describe('BK Library (LBMS) API Test Suite', () => {
             assert.ok(paths.includes('/api/auth/login'), 'Thiếu endpoint Swagger: /api/auth/login');
             assert.ok(paths.includes('/api/auth/me'), 'Thiếu endpoint Swagger: /api/auth/me');
             assert.ok(paths.includes('/api/upload'), 'Thiếu endpoint Swagger: /api/upload');
+            assert.ok(paths.includes('/api/users'), 'Thiếu endpoint Swagger: /api/users');
+            assert.ok(paths.includes('/api/users/{id}'), 'Thiếu endpoint Swagger: /api/users/{id}');
+            assert.ok(paths.includes('/api/users/{id}/role'), 'Thiếu endpoint Swagger: /api/users/{id}/role');
+            assert.ok(paths.includes('/api/users/{id}/status'), 'Thiếu endpoint Swagger: /api/users/{id}/status');
         });
 
         test('Endpoint Swagger UI /api/api-docs phải trả về mã HTTP 200 hoặc redirect', async () => {
@@ -133,6 +137,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             assert.ok(body.endpoints.books);
             assert.ok(body.endpoints.borrows);
             assert.ok(body.endpoints.categories);
+            assert.ok(body.endpoints.users);
         });
 
         test('GET /api/health - Server health check trả về 200', async () => {
@@ -1666,6 +1671,422 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 assert.equal(body.data.length, 1);
             } finally {
                 activityLogRepository.getRecent = originalRecent;
+            }
+        });
+    });
+
+    // =========================================================================
+    // 13. KIỂM THỬ USER MANAGEMENT API (/api/users)
+    // =========================================================================
+    describe('13. User Management API (/api/users)', () => {
+        test('GET /api/users - Lấy danh sách người dùng có phân trang cho ADMIN và LIBRARIAN', async () => {
+            const originalFindAll = userRepository.findAll;
+            userRepository.findAll = async () => ({
+                items: [
+                    {
+                        id: 1,
+                        userCode: 'ADMIN01',
+                        username: 'admin',
+                        fullName: 'Quản Trị Viên',
+                        email: 'admin@hcmut.edu.vn',
+                        role: 'ADMIN',
+                        status: 'ACTIVE',
+                    },
+                    {
+                        id: 2,
+                        userCode: 'TT001',
+                        username: 'thu.thu',
+                        fullName: 'Thủ Thư',
+                        email: 'thuthu@hcmut.edu.vn',
+                        role: 'LIBRARIAN',
+                        status: 'ACTIVE',
+                    },
+                ],
+                pagination: { page: 1, size: 10, total: 2, totalPages: 1 },
+            });
+
+            try {
+                // ADMIN gọi thành công
+                const resAdmin = await fetch(`${baseUrl}/api/users?page=1&size=10`, {
+                    headers: adminHeaders,
+                });
+                assert.equal(resAdmin.status, 200);
+                const bodyAdmin = await resAdmin.json();
+                assert.equal(bodyAdmin.success, true);
+                assert.equal(bodyAdmin.data.items.length, 2);
+
+                // LIBRARIAN gọi thành công
+                const resLib = await fetch(`${baseUrl}/api/users`, {
+                    headers: librarianHeaders,
+                });
+                assert.equal(resLib.status, 200);
+
+                // STUDENT bị chặn 403 Forbidden
+                const resStudent = await fetch(`${baseUrl}/api/users`, {
+                    headers: studentHeaders,
+                });
+                assert.equal(resStudent.status, 403);
+            } finally {
+                userRepository.findAll = originalFindAll;
+            }
+        });
+
+        test('GET /api/users - Chặn tham số phân trang hoặc role/status không hợp lệ (400)', async () => {
+            const resBadPage = await fetch(`${baseUrl}/api/users?page=0`, { headers: adminHeaders });
+            assert.equal(resBadPage.status, 400);
+
+            const resBadSize = await fetch(`${baseUrl}/api/users?size=999`, { headers: adminHeaders });
+            assert.equal(resBadSize.status, 400);
+
+            const resBadRole = await fetch(`${baseUrl}/api/users?role=INVALID_ROLE`, { headers: adminHeaders });
+            assert.equal(resBadRole.status, 400);
+
+            const resBadStatus = await fetch(`${baseUrl}/api/users?status=INVALID_STATUS`, { headers: adminHeaders });
+            assert.equal(resBadStatus.status, 400);
+        });
+
+        test('GET /api/users/:id - Lấy chi tiết thông tin người dùng thành công và chặn ID không hợp lệ / không tồn tại', async () => {
+            const originalFindById = userRepository.findById;
+            userRepository.findById = async (id) => {
+                if (id === 10) {
+                    return {
+                        id: 10,
+                        userCode: 'SV2026001',
+                        username: 'test.user',
+                        fullName: 'Nguyễn Văn Test',
+                        email: 'test@example.com',
+                        role: 'STUDENT',
+                        status: 'ACTIVE',
+                    };
+                }
+                return null;
+            };
+
+            try {
+                // Lấy thành công
+                const res = await fetch(`${baseUrl}/api/users/10`, { headers: adminHeaders });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.data.id, 10);
+                assert.equal(body.data.username, 'test.user');
+
+                // 400 khi ID không phải số
+                const resBadId = await fetch(`${baseUrl}/api/users/abc`, { headers: adminHeaders });
+                assert.equal(resBadId.status, 400);
+
+                // 404 khi không tìm thấy
+                const resNotFound = await fetch(`${baseUrl}/api/users/999`, { headers: adminHeaders });
+                assert.equal(resNotFound.status, 404);
+            } finally {
+                userRepository.findById = originalFindById;
+            }
+        });
+
+        test('POST /api/users - ADMIN thêm người dùng mới thành công (201 Created)', async () => {
+            const originalFindByUsername = userRepository.findByUsername;
+            const originalFindByEmail = userRepository.findByEmail;
+            const originalFindByUserCode = userRepository.findByUserCode;
+            const originalCreate = userRepository.create;
+
+            userRepository.findByUsername = async () => null;
+            userRepository.findByEmail = async () => null;
+            userRepository.findByUserCode = async () => null;
+            userRepository.create = async (payload) => ({
+                id: 15,
+                userCode: payload.userCode,
+                username: payload.username,
+                fullName: payload.fullName,
+                email: payload.email,
+                phone: payload.phone,
+                role: payload.role,
+                status: payload.status,
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/users`, {
+                    method: 'POST',
+                    headers: adminHeaders,
+                    body: JSON.stringify({
+                        username: 'gv.nguyenan',
+                        password: 'password123',
+                        fullName: 'Nguyễn Văn An',
+                        email: 'an.nguyen@university.edu.vn',
+                        phone: '0909123456',
+                        role: 'LECTURER',
+                        status: 'ACTIVE',
+                    }),
+                });
+                assert.equal(res.status, 201);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.username, 'gv.nguyenan');
+                assert.equal(body.data.role, 'LECTURER');
+
+                // Chặn 403 khi STUDENT gọi
+                const resStudent = await fetch(`${baseUrl}/api/users`, {
+                    method: 'POST',
+                    headers: studentHeaders,
+                    body: JSON.stringify({ username: 'hacker' }),
+                });
+                assert.equal(resStudent.status, 403);
+            } finally {
+                userRepository.findByUsername = originalFindByUsername;
+                userRepository.findByEmail = originalFindByEmail;
+                userRepository.findByUserCode = originalFindByUserCode;
+                userRepository.create = originalCreate;
+            }
+        });
+
+        test('POST /api/users - Báo lỗi 400 khi thiếu thông tin và 409 khi trùng username/email', async () => {
+            const originalFindByUsername = userRepository.findByUsername;
+            userRepository.findByUsername = async () => ({ id: 1, username: 'admin' });
+
+            try {
+                // Thiếu password
+                const resMissing = await fetch(`${baseUrl}/api/users`, {
+                    method: 'POST',
+                    headers: adminHeaders,
+                    body: JSON.stringify({
+                        username: 'user1',
+                        fullName: 'User One',
+                        email: 'user1@test.com',
+                    }),
+                });
+                assert.equal(resMissing.status, 400);
+
+                // Trùng username
+                const resConflict = await fetch(`${baseUrl}/api/users`, {
+                    method: 'POST',
+                    headers: adminHeaders,
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: '123456',
+                        fullName: 'Admin Copy',
+                        email: 'admin.copy@test.com',
+                    }),
+                });
+                assert.equal(resConflict.status, 409);
+            } finally {
+                userRepository.findByUsername = originalFindByUsername;
+            }
+        });
+
+        test('PUT /api/users/:id - ADMIN sửa thông tin người dùng thành công', async () => {
+            const originalFindById = userRepository.findById;
+            const originalFindByEmailExcludeId = userRepository.findByEmailExcludeId;
+            const originalUpdate = userRepository.update;
+
+            userRepository.findById = async (id) => ({
+                id,
+                userCode: 'SV001',
+                username: 'sv001',
+                fullName: 'Sinh Viên Cũ',
+                email: 'old@example.com',
+                role: 'STUDENT',
+                status: 'ACTIVE',
+            });
+            userRepository.findByEmailExcludeId = async () => null;
+            userRepository.update = async (id, fields) => ({
+                id,
+                userCode: 'SV001',
+                username: 'sv001',
+                fullName: fields.fullName || 'Sinh Viên Cũ',
+                email: fields.email || 'old@example.com',
+                role: 'STUDENT',
+                status: 'ACTIVE',
+            });
+
+            try {
+                const res = await fetch(`${baseUrl}/api/users/4`, {
+                    method: 'PUT',
+                    headers: adminHeaders,
+                    body: JSON.stringify({
+                        fullName: 'Sinh Viên Mới Cập Nhật',
+                        email: 'newemail@example.com',
+                    }),
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.success, true);
+                assert.equal(body.data.fullName, 'Sinh Viên Mới Cập Nhật');
+            } finally {
+                userRepository.findById = originalFindById;
+                userRepository.findByEmailExcludeId = originalFindByEmailExcludeId;
+                userRepository.update = originalUpdate;
+            }
+        });
+
+        test('PATCH /api/users/:id/role - ADMIN đổi role thành công và chặn tự hạ quyền chính mình', async () => {
+            const originalFindById = userRepository.findById;
+            const originalUpdateRole = userRepository.updateRole;
+
+            userRepository.findById = async (id) => ({
+                id,
+                userCode: id === 1 ? 'ADMIN01' : 'SV001',
+                username: id === 1 ? 'admin' : 'student1',
+                role: id === 1 ? 'ADMIN' : 'STUDENT',
+                status: 'ACTIVE',
+            });
+            userRepository.updateRole = async (id, role) => ({
+                id,
+                role,
+            });
+
+            try {
+                // Đổi role cho user khác thành LIBRARIAN thành công
+                const res = await fetch(`${baseUrl}/api/users/5/role`, {
+                    method: 'PATCH',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ role: 'LIBRARIAN' }),
+                });
+                assert.equal(res.status, 200);
+                const body = await res.json();
+                assert.equal(body.data.role, 'LIBRARIAN');
+
+                // Báo lỗi 400 khi role không hợp lệ
+                const resBadRole = await fetch(`${baseUrl}/api/users/5/role`, {
+                    method: 'PATCH',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ role: 'SUPER_HERO' }),
+                });
+                assert.equal(resBadRole.status, 400);
+
+                // Báo lỗi 400 khi Admin (id: 1) tự hạ quyền của chính mình
+                const resSelfDemote = await fetch(`${baseUrl}/api/users/1/role`, {
+                    method: 'PATCH',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ role: 'STUDENT' }),
+                });
+                assert.equal(resSelfDemote.status, 400);
+
+                // Chặn 403 khi STUDENT gọi
+                const resStudent = await fetch(`${baseUrl}/api/users/5/role`, {
+                    method: 'PATCH',
+                    headers: studentHeaders,
+                    body: JSON.stringify({ role: 'ADMIN' }),
+                });
+                assert.equal(resStudent.status, 403);
+            } finally {
+                userRepository.findById = originalFindById;
+                userRepository.updateRole = originalUpdateRole;
+            }
+        });
+
+        test('PATCH /api/users/:id/status - Đổi trạng thái (Status) thành công và chặn tự khóa tài khoản', async () => {
+            const originalFindById = userRepository.findById;
+            const originalUpdateStatus = userRepository.updateStatus;
+
+            userRepository.findById = async (id) => ({
+                id,
+                userCode: id === 1 ? 'ADMIN01' : 'SV001',
+                status: 'ACTIVE',
+            });
+            userRepository.updateStatus = async (id, status) => ({
+                id,
+                status,
+            });
+
+            try {
+                // Khóa tài khoản user khác thành công
+                const resLock = await fetch(`${baseUrl}/api/users/4/status`, {
+                    method: 'PATCH',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ status: 'LOCKED' }),
+                });
+                assert.equal(resLock.status, 200);
+                const bodyLock = await resLock.json();
+                assert.equal(bodyLock.data.status, 'LOCKED');
+
+                // Báo lỗi 400 khi status không hợp lệ
+                const resBadStatus = await fetch(`${baseUrl}/api/users/4/status`, {
+                    method: 'PATCH',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ status: 'BANNED' }),
+                });
+                assert.equal(resBadStatus.status, 400);
+
+                // Báo lỗi 400 khi Admin tự khóa tài khoản của chính mình (id: 1)
+                const resSelfLock = await fetch(`${baseUrl}/api/users/1/status`, {
+                    method: 'PATCH',
+                    headers: adminHeaders,
+                    body: JSON.stringify({ status: 'LOCKED' }),
+                });
+                assert.equal(resSelfLock.status, 400);
+            } finally {
+                userRepository.findById = originalFindById;
+                userRepository.updateStatus = originalUpdateStatus;
+            }
+        });
+
+        test('DELETE /api/users/:id - Xóa người dùng, kiểm tra ràng buộc và chặn tự xóa chính mình', async () => {
+            const originalFindById = userRepository.findById;
+            const originalCheck = userRepository.checkUserConstraints;
+            const originalDelete = userRepository.delete;
+
+            userRepository.findById = async (id) => ({
+                id,
+                userCode: id === 1 ? 'ADMIN01' : 'SV001',
+                username: id === 1 ? 'admin' : 'student1',
+            });
+
+            try {
+                // 1. Chặn 400 khi Admin tự xóa tài khoản của chính mình
+                const resSelfDelete = await fetch(`${baseUrl}/api/users/1`, {
+                    method: 'DELETE',
+                    headers: adminHeaders,
+                });
+                assert.equal(resSelfDelete.status, 400);
+
+                // 2. Chặn 400 khi user đang mượn sách chưa trả
+                userRepository.checkUserConstraints = async () => ({
+                    activeLoans: 2,
+                    unpaidFines: 0,
+                    totalBorrowRecords: 2,
+                    totalBorrowRequests: 0,
+                    totalFines: 0,
+                });
+                const resBorrowing = await fetch(`${baseUrl}/api/users/4`, {
+                    method: 'DELETE',
+                    headers: adminHeaders,
+                });
+                assert.equal(resBorrowing.status, 400);
+
+                // 3. Chặn 409 khi user có lịch sử giao dịch trong quá khứ
+                userRepository.checkUserConstraints = async () => ({
+                    activeLoans: 0,
+                    unpaidFines: 0,
+                    totalBorrowRecords: 5,
+                    totalBorrowRequests: 1,
+                    totalFines: 0,
+                });
+                const resHistory = await fetch(`${baseUrl}/api/users/4`, {
+                    method: 'DELETE',
+                    headers: adminHeaders,
+                });
+                assert.equal(resHistory.status, 409);
+
+                // 4. Xóa thành công khi user hoàn toàn không có ràng buộc dữ liệu
+                userRepository.checkUserConstraints = async () => ({
+                    activeLoans: 0,
+                    unpaidFines: 0,
+                    totalBorrowRecords: 0,
+                    totalBorrowRequests: 0,
+                    totalFines: 0,
+                });
+                userRepository.delete = async () => true;
+
+                const resSuccess = await fetch(`${baseUrl}/api/users/4`, {
+                    method: 'DELETE',
+                    headers: adminHeaders,
+                });
+                assert.equal(resSuccess.status, 200);
+                const bodySuccess = await resSuccess.json();
+                assert.equal(bodySuccess.success, true);
+                assert.equal(bodySuccess.message, 'Xóa người dùng thành công.');
+            } finally {
+                userRepository.findById = originalFindById;
+                userRepository.checkUserConstraints = originalCheck;
+                userRepository.delete = originalDelete;
             }
         });
     });
