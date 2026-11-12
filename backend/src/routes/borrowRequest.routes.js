@@ -195,4 +195,12 @@ router.get('/:id', authenticate, borrowRequestController.getRequestById);
 router.patch('/:id/cancel', authenticate, borrowRequestController.cancelRequest);
 router.patch('/:id/status', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.updateStatus);
 
+// API duyệt yêu cầu mượn sách (hỗ trợ cả PATCH và POST)
+router.patch('/:id/approve', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.approveRequest);
+router.post('/:id/approve', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.approveRequest);
+
+// API từ chối yêu cầu mượn sách (hỗ trợ cả PATCH và POST)
+router.patch('/:id/reject', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.rejectRequest);
+router.post('/:id/reject', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.rejectRequest);
+
 module.exports = router;
