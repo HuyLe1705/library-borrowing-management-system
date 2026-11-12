@@ -1,0 +1,1218 @@
+.librarian-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.librarian-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.librarian-eyebrow {
+  margin-bottom: 9px;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.librarian-page-heading h1 {
+  margin: 0;
+  color: #172033;
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 750;
+  letter-spacing: -0.8px;
+}
+
+.librarian-page-heading p {
+  margin: 9px 0 0;
+  color: #7b8497;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.librarian-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: 0.2s;
+}
+
+.librarian-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.librarian-button-primary {
+  color: #fff;
+  background: #2563eb;
+  box-shadow: 0 4px 10px rgb(37 99 235 / 16%);
+}
+
+.librarian-button-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.librarian-button-secondary {
+  border-color: #e0e5ed;
+  color: #4b5567;
+  background: #fff;
+}
+
+.librarian-button-secondary:hover:not(:disabled) {
+  border-color: #b9c9e6;
+  background: #f8faff;
+}
+
+.librarian-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.librarian-stat-card {
+  min-width: 0;
+  padding: 21px;
+  border: 1px solid #e9edf4;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(20 35 70 / 3%);
+}
+
+.librarian-stat-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 17px;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.librarian-stat-icon.blue {
+  color: #2563eb;
+  background: #eaf1ff;
+}
+
+.librarian-stat-icon.green {
+  color: #15965b;
+  background: #e4f8ee;
+}
+
+.librarian-stat-icon.purple {
+  color: #8254d6;
+  background: #f1eaff;
+}
+
+.librarian-stat-icon.orange {
+  color: #d97706;
+  background: #fff1d9;
+}
+
+.librarian-stat-label {
+  color: #778196;
+  font-size: 12px;
+}
+
+.librarian-stat-value {
+  margin-top: 7px;
+  color: #182237;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.librarian-stat-description {
+  margin-top: 8px;
+  color: #9aa2b1;
+  font-size: 10px;
+}
+
+.librarian-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e8ecf3;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(20 35 70 / 3%);
+}
+
+.librarian-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 23px 24px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.librarian-panel-heading h2,
+.librarian-guide-panel h2,
+.librarian-return-result h2 {
+  margin: 0;
+  color: #1c273b;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.librarian-panel-heading p {
+  margin: 7px 0 0;
+  color: #8a93a5;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.librarian-text-link {
+  flex-shrink: 0;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.librarian-text-link:hover {
+  text-decoration: underline;
+}
+
+.librarian-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.librarian-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.librarian-table th {
+  padding: 14px 20px;
+  color: #8a93a5;
+  background: #fafbfe;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.librarian-table td {
+  padding: 16px 20px;
+  border-top: 1px solid #f0f2f7;
+  color: #596477;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.librarian-table tbody tr:hover {
+  background: #fbfcff;
+}
+
+.librarian-table td strong {
+  color: #263249;
+}
+
+.librarian-table-empty {
+  padding: 35px 20px !important;
+  color: #8a93a5 !important;
+  text-align: center;
+}
+
+.librarian-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.status-returned {
+  color: #15803d;
+  background: #e8f8ed;
+}
+
+.status-overdue {
+  color: #b45309;
+  background: #fff2d9;
+}
+
+.status-borrowing {
+  color: #1d4ed8;
+  background: #eaf1ff;
+}
+
+.librarian-count-badge {
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: #b45309;
+  background: #fff4df;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.librarian-overdue-list {
+  padding: 0 24px;
+}
+
+.librarian-overdue-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 0;
+  border-bottom: 1px solid #f0f2f7;
+}
+
+.librarian-overdue-item:last-child {
+  border-bottom: 0;
+}
+
+.librarian-overdue-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 10px;
+  color: #b45309;
+  background: #fff2d9;
+  font-weight: 800;
+}
+
+.librarian-overdue-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.librarian-overdue-info strong {
+  overflow: hidden;
+  color: #273349;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.librarian-overdue-info span,
+.librarian-overdue-date span {
+  color: #8a93a5;
+  font-size: 10px;
+}
+
+.librarian-overdue-date {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: right;
+}
+
+.librarian-overdue-date strong {
+  color: #b45309;
+  font-size: 11px;
+}
+
+.librarian-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 35px 15px;
+  color: #8993a5;
+  font-size: 12px;
+  text-align: center;
+}
+
+.librarian-empty-state strong {
+  margin-top: 10px;
+  color: #344056;
+}
+
+.librarian-empty-state p {
+  margin-bottom: 0;
+  font-size: 11px;
+}
+
+.librarian-empty-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  color: #15803d;
+  background: #e8f8ed;
+  font-size: 20px;
+}
+
+/* Borrow / return forms */
+
+.librarian-workflow-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.8fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.librarian-form-panel {
+  padding-bottom: 23px;
+}
+
+.librarian-step-number {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 11px;
+  color: #2563eb;
+  background: #eaf1ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.librarian-form {
+  display: flex;
+  flex-direction: column;
+  gap: 23px;
+  padding: 24px;
+}
+
+.librarian-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.librarian-field label {
+  color: #344056;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.librarian-field label span {
+  color: #dc2626;
+}
+
+.librarian-input-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 47px;
+  padding: 0 14px;
+  border: 1px solid #dfe5ef;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.librarian-input-with-icon:focus-within {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 9%);
+}
+
+.librarian-input-with-icon > span {
+  color: #8a96aa;
+  font-size: 17px;
+}
+
+.librarian-input-with-icon input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #263249;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+
+.librarian-input-with-icon input::placeholder {
+  color: #a7afbd;
+}
+
+.librarian-field small {
+  color: #8b94a5;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.librarian-form-note {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  color: #2563eb;
+  background: #f4f8ff;
+}
+
+.librarian-form-note > span {
+  flex-shrink: 0;
+  font-weight: 800;
+}
+
+.librarian-form-note p {
+  margin: 0;
+  color: #536783;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.librarian-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.librarian-guide-panel {
+  padding: 24px;
+}
+
+.librarian-guide-illustration {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 20px;
+  place-items: center;
+  border-radius: 15px;
+  color: #2563eb;
+  background: #eaf1ff;
+  font-size: 27px;
+}
+
+.librarian-guide-description {
+  margin: 10px 0 24px;
+  color: #8791a3;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.librarian-guide-step {
+  display: flex;
+  gap: 12px;
+  padding: 15px 0;
+  border-top: 1px solid #edf0f5;
+}
+
+.librarian-guide-step > span {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  color: #2563eb;
+  background: #eaf1ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.librarian-guide-step strong {
+  color: #344056;
+  font-size: 11px;
+}
+
+.librarian-guide-step p {
+  margin: 6px 0 0;
+  color: #8a93a5;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.librarian-alert {
+  margin: 20px 24px 0;
+  padding: 13px 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.librarian-alert-error {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.librarian-alert-success {
+  border-color: #bbf7d0;
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.librarian-return-result {
+  padding-bottom: 22px;
+}
+
+.librarian-return-result-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.librarian-result-check {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  color: #15803d;
+  background: #e8f8ed;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.librarian-return-result-heading p {
+  margin: 6px 0 0;
+  color: #8791a3;
+  font-size: 11px;
+}
+
+.librarian-result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 24px;
+}
+
+.librarian-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.librarian-result-item span {
+  color: #8993a5;
+  font-size: 10px;
+}
+
+.librarian-result-item strong {
+  overflow-wrap: anywhere;
+  color: #263249;
+  font-size: 12px;
+}
+
+.librarian-process-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d9f3e4;
+  border-radius: 9px;
+  color: #16804a;
+  background: #f0fdf4;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.librarian-process-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+@media (max-width: 1100px) {
+  .librarian-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .librarian-workflow-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .librarian-guide-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 16px;
+  }
+
+  .librarian-guide-illustration {
+    grid-row: span 2;
+  }
+
+  .librarian-guide-panel h2,
+  .librarian-guide-description {
+    grid-column: 2;
+  }
+
+  .librarian-guide-step {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .librarian-page {
+    gap: 17px;
+  }
+
+  .librarian-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .librarian-page-heading h1 {
+    font-size: 24px;
+  }
+
+  .librarian-stats-grid {
+    gap: 10px;
+  }
+
+  .librarian-stat-card {
+    padding: 15px;
+  }
+
+  .librarian-stat-value {
+    font-size: 25px;
+  }
+
+  .librarian-panel-heading {
+    padding: 18px 15px;
+  }
+
+  .librarian-overdue-list {
+    padding: 0 15px;
+  }
+
+  .librarian-form,
+  .librarian-guide-panel {
+    padding: 18px 15px;
+  }
+
+  .librarian-alert {
+    margin: 16px 15px 0;
+  }
+
+  .librarian-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .librarian-form-actions .librarian-button {
+    width: 100%;
+  }
+
+  .librarian-result-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .librarian-process-chip {
+    white-space: normal;
+  }
+}
+
+/* =========================================
+   LIBRARIAN PAGES - SHARED STYLES
+   ========================================= */
+
+.librarian-page {
+    width: 100%;
+    min-width: 0;
+    padding: 24px;
+    color: #1e293b;
+    box-sizing: border-box;
+}
+
+.librarian-page *,
+.librarian-page *::before,
+.librarian-page *::after {
+    box-sizing: border-box;
+}
+
+/* =========================================
+   PAGE HEADING
+   ========================================= */
+
+.librarian-page .page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 26px;
+}
+
+.librarian-page .page-heading h1 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.librarian-page .page-heading p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.librarian-page .page-heading > button {
+    flex-shrink: 0;
+}
+
+/* =========================================
+   SEARCH FORM
+   ========================================= */
+
+.librarian-page .search-form {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 18px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgb(15 23 42 / 3%);
+}
+
+.librarian-page .search-form input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 14px;
+    color: #1e293b;
+    font: inherit;
+    font-size: 14px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.librarian-page .search-form input::placeholder {
+    color: #94a3b8;
+}
+
+.librarian-page .search-form input:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 10%);
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
+
+.librarian-page button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 10px 16px;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    background: #2563eb;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.librarian-page button:hover:not(:disabled) {
+    background: #1d4ed8;
+    box-shadow: 0 4px 10px rgb(37 99 235 / 15%);
+}
+
+.librarian-page button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.librarian-page button:focus-visible {
+    outline: 3px solid rgb(59 130 246 / 30%);
+    outline-offset: 2px;
+}
+
+.librarian-page button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.librarian-page .secondary-button {
+    color: #334155;
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+.librarian-page .secondary-button:hover:not(:disabled) {
+    color: #1e293b;
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    box-shadow: none;
+}
+
+.librarian-page .success-button {
+    color: #ffffff;
+    background: #16a34a;
+}
+
+.librarian-page .success-button:hover:not(:disabled) {
+    background: #15803d;
+}
+
+.librarian-page .danger-button {
+    color: #ffffff;
+    background: #dc2626;
+}
+
+.librarian-page .danger-button:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+/* =========================================
+   FILTER BAR
+   ========================================= */
+
+.librarian-page .filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.librarian-page .filter-bar label {
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.librarian-page .filter-bar select {
+    min-width: 160px;
+    height: 40px;
+    padding: 0 32px 0 12px;
+    color: #334155;
+    font: inherit;
+    font-size: 14px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+}
+
+.librarian-page .filter-bar select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 10%);
+}
+
+.librarian-page .result-count {
+    margin-left: auto;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* =========================================
+   TABLE CARD
+   ========================================= */
+
+.librarian-page .table-card {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgb(15 23 42 / 4%);
+}
+
+.librarian-page .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 22px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.librarian-page .table-header h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.librarian-page .table-header > span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.librarian-page .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.librarian-page .data-table {
+    width: 100%;
+    min-width: 850px;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.librarian-page .data-table thead {
+    background: #f8fafc;
+}
+
+.librarian-page .data-table th {
+    padding: 15px 18px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.librarian-page .data-table td {
+    padding: 16px 18px;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.6;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.librarian-page .data-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.librarian-page .data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.librarian-page .data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.librarian-page .data-table .primary-cell {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.librarian-page .data-table .empty-state {
+    padding: 44px 20px;
+    color: #94a3b8;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* =========================================
+   STATUS BADGES
+   ========================================= */
+
+.librarian-page .status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    border-radius: 999px;
+}
+
+.librarian-page .status-success {
+    color: #15803d;
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+
+.librarian-page .status-danger {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.librarian-page .status-warning {
+    color: #a16207;
+    background: #fef3c7;
+    border-color: #fde68a;
+}
+
+.librarian-page .status-info {
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-color: #bfdbfe;
+}
+
+.librarian-page .status-neutral {
+    color: #475569;
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+
+/* =========================================
+   ACTION BUTTONS
+   ========================================= */
+
+.librarian-page .action-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.librarian-page .action-buttons button {
+    min-height: 34px;
+    padding: 7px 11px;
+    font-size: 12px;
+    border-radius: 7px;
+}
+
+/* =========================================
+   ALERTS
+   ========================================= */
+
+.librarian-page .error-message,
+.librarian-page .success-message {
+    margin-bottom: 18px;
+    padding: 13px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+
+.librarian-page .error-message {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.librarian-page .success-message {
+    color: #166534;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+/* =========================================
+   RESPONSIVE: TABLET
+   ========================================= */
+
+@media (max-width: 1024px) {
+    .librarian-page {
+        padding: 20px;
+    }
+
+    .librarian-page .page-heading h1 {
+        font-size: 25px;
+    }
+
+    .librarian-page .data-table {
+        min-width: 800px;
+    }
+}
+
+/* =========================================
+   RESPONSIVE: MOBILE
+   ========================================= */
+
+@media (max-width: 640px) {
+    .librarian-page {
+        padding: 14px;
+    }
+
+    .librarian-page .page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .librarian-page .page-heading h1 {
+        font-size: 23px;
+    }
+
+    .librarian-page .page-heading > button {
+        width: 100%;
+    }
+
+    .librarian-page .search-form {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 14px;
+    }
+
+    .librarian-page .search-form input {
+        width: 100%;
+    }
+
+    .librarian-page .search-form button {
+        width: 100%;
+    }
+
+    .librarian-page .filter-bar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px;
+    }
+
+    .librarian-page .filter-bar select {
+        width: 100%;
+    }
+
+    .librarian-page .result-count {
+        margin-left: 0;
+    }
+
+    .librarian-page .table-header {
+        padding: 16px;
+    }
+
+    .librarian-page .data-table th,
+    .librarian-page .data-table td {
+        padding: 13px 14px;
+    }
+
+    .librarian-page .action-buttons {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .librarian-page .action-buttons button {
+        width: 100%;
+    }
+}

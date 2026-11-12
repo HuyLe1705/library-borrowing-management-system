@@ -1,5 +1,9 @@
-node_modules
-npm-debug.log
-.env
-.git
-.gitignore
+**/node_modules
+**/build
+**/dist
+**/.git
+**/.gitignore
+**/*.log
+**/.env
+**/.env.*
+!.env.example

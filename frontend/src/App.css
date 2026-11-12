@@ -1,0 +1,66 @@
+/* ===== GLOBAL TYPOGRAPHY — BK LIBRARY ===== */
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tiêu đề toàn website */
+h1 {
+  font-size: clamp(30px, 3vw, 40px);
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: clamp(25px, 2.5vw, 32px);
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 20px;
+  line-height: 1.5;
+  font-weight: 650;
+}
+
+h4,
+h5,
+h6 {
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+/* Nội dung và mô tả */
+p,
+li {
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+/* Nút bấm và biểu mẫu */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 15px;
+}
+
+/* Liên kết điều hướng */
+nav a {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Chữ phụ: thông tin, nhãn, trạng thái */
+small {
+  font-size: 13px;
+}

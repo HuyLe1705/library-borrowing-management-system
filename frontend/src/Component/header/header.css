@@ -1,0 +1,464 @@
+/* ================= Header ================= */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+
+    height: 76px;
+    padding: 0 6%;
+
+    background: #ffffff;
+    border-bottom: 1px solid #e8edf5;
+    box-shadow: 0 3px 16px rgba(15, 35, 75, 0.06);
+
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* ================= Logo ================= */
+.header-left {
+    flex-shrink: 0;
+}
+
+.header-left .logo {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    color: #12336b;
+    text-decoration: none;
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.5px;
+}
+
+.header-left .logo img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 10px;
+    transition: transform 0.25s ease;
+}
+
+.header-left .logo:hover img {
+    transform: translateY(-2px);
+}
+
+/* ================= Navigation ================= */
+.header-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.header-nav a {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+
+    padding: 11px 13px;
+    border-radius: 8px;
+
+    color: #536178;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.header-nav a:hover {
+    color: #1769e0;
+    background: #f0f6ff;
+}
+
+.header-nav a.active {
+    color: #1769e0;
+    background: #edf4ff;
+}
+
+.header-nav a.active::after {
+    content: '';
+
+    position: absolute;
+    bottom: -7px;
+    left: 18%;
+
+    width: 64%;
+    height: 3px;
+
+    background: #2878ed;
+    border-radius: 5px;
+}
+
+/* ================= Account ================= */
+.header-right {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.btn-login {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+
+    padding: 9px 15px;
+    border: 1px solid #dce7f7;
+    border-radius: 12px;
+
+    background: #f5f8fe;
+    color: #17396f;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-login:hover {
+    background: #eaf2ff;
+    border-color: #b8d0f7;
+}
+
+.btn-login:focus-visible,
+.header-toggle:focus-visible,
+.logout-button:focus-visible {
+    outline: 3px solid rgba(40, 120, 237, 0.3);
+    outline-offset: 3px;
+}
+
+.admin-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+
+    background: #dceaff;
+    color: #1769e0;
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.admin-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.admin-label > span {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-label small {
+    color: #8491a7;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.account-arrow {
+    margin-left: 2px;
+    color: #71809a;
+    font-size: 10px;
+}
+
+/* ================= Account Dropdown ================= */
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 1100;
+
+    width: 260px;
+    padding: 8px;
+
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(22, 48, 91, 0.15);
+
+    animation: dropdown-appear 0.18s ease-out;
+}
+
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 12px 10px;
+}
+
+.account-info > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.account-info strong {
+    overflow: hidden;
+    color: #17396f;
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-info small {
+    color: #8491a7;
+    font-size: 12px;
+}
+
+.account-divider {
+    height: 1px;
+    margin: 4px 2px;
+    background: #edf0f5;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+    padding: 11px 10px;
+    border: none;
+    border-radius: 9px;
+
+    background: transparent;
+    color: #526078;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.logout-button span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+
+    background: #edf4ff;
+    color: #1769e0;
+    font-size: 16px;
+}
+
+.logout-button:hover {
+    background: #fff1f0;
+    color: #d9363e;
+}
+
+.logout-button:hover span {
+    background: #ffe0de;
+    color: #d9363e;
+}
+
+@keyframes dropdown-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================= Mobile Menu Button ================= */
+.header-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 42px;
+    height: 42px;
+    border: 1px solid #e1e8f2;
+    border-radius: 10px;
+
+    background: #ffffff;
+    color: #17396f;
+
+    font-family: inherit;
+    font-size: 23px;
+    cursor: pointer;
+}
+
+/* ================= Responsive: Tablet ================= */
+@media screen and (max-width: 1150px) {
+    .header {
+        gap: 14px;
+        padding: 0 24px;
+    }
+
+    .header-left .logo {
+        gap: 8px;
+        font-size: 19px;
+    }
+
+    .header-left .logo img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .header-nav {
+        gap: 2px;
+    }
+
+    .header-nav a {
+        padding: 10px 9px;
+        font-size: 13px;
+    }
+
+    .btn-login {
+        gap: 7px;
+        padding: 8px 10px;
+    }
+}
+
+/* ================= Responsive: Mobile ================= */
+@media screen and (max-width: 900px) {
+    .header {
+        height: 70px;
+        padding: 0 20px;
+    }
+
+    .header-toggle {
+        display: inline-flex;
+        order: 3;
+    }
+
+    .header-right {
+        margin-left: auto;
+        margin-right: 10px;
+    }
+
+    .header-nav {
+        display: none;
+
+        position: absolute;
+        top: calc(100% + 1px);
+        left: 0;
+        right: 0;
+        z-index: 1050;
+
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
+
+        padding: 14px 20px 18px;
+
+        background: #ffffff;
+        border-bottom: 1px solid #e8edf5;
+        box-shadow: 0 10px 20px rgba(15, 35, 75, 0.08);
+    }
+
+    .header-nav.open {
+        display: flex;
+    }
+
+    .header-nav a {
+        padding: 13px 14px;
+        font-size: 14px;
+    }
+
+    .header-nav a.active::after {
+        display: none;
+    }
+
+    .header-nav a.active {
+        background: #edf4ff;
+    }
+
+    .account-dropdown {
+        top: calc(100% + 10px);
+    }
+}
+
+/* ================= Responsive: Small Mobile ================= */
+@media screen and (max-width: 480px) {
+    .header {
+        gap: 8px;
+        padding: 0 12px;
+    }
+
+    .header-left .logo {
+        gap: 7px;
+        font-size: 16px;
+    }
+
+    .header-left .logo img {
+        width: 34px;
+        height: 34px;
+    }
+
+    .header-right {
+        margin-right: 0;
+    }
+
+    .btn-login {
+        gap: 5px;
+        padding: 5px;
+        border-radius: 10px;
+    }
+
+    .admin-label {
+        display: none;
+    }
+
+    .account-arrow {
+        font-size: 9px;
+    }
+
+    .header-toggle {
+        width: 36px;
+        height: 36px;
+        font-size: 21px;
+    }
+
+    .account-dropdown {
+        right: -44px;
+        width: min(260px, calc(100vw - 24px));
+    }
+}
+
+/* ================= Reduced Motion ================= */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

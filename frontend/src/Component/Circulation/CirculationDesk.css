@@ -1,0 +1,156 @@
+/* Import font hiện đại (Inter) từ Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    background-color: #f4f7f6; /* Màu nền xám nhẹ cho toàn trang */
+    font-family: 'Inter', sans-serif;
+}
+
+.desk-container {
+    background-color: #ffffff;
+    padding: 40px;
+    max-width: 500px;
+    margin: 50px auto;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); /* Đổ bóng mềm */
+    border: 1px solid #eaeaea;
+}
+
+/* THÊM TIỀN TỐ .desk-container CHO TẤT CẢ CÁC THẺ CHUNG */
+.desk-container h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.desk-container .input-group {
+    margin-bottom: 25px;
+}
+
+.desk-container .input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.desk-container .input-group input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box; 
+}
+
+.desk-container .input-group input:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+/* Button chung */
+.desk-container button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.desk-container button:active {
+    transform: scale(0.98);
+}
+
+.desk-container .btn-check {
+    background-color: #4a90e2;
+    color: white;
+}
+
+.desk-container .btn-check:hover {
+    background-color: #357abd;
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+/* Khu vực hiển thị thông tin phạt */
+.desk-container .fine-box {
+    margin-top: 30px;
+    background-color: #fff;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    padding: 20px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.desk-container .fine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.desk-container .fine-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2d3748;
+}
+
+.desk-container .fine-details p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    color: #4a5568;
+}
+
+.desk-container .amount-highlight {
+    color: #e53e3e;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+/* Cảnh báo sách quá hạn */
+.desk-container .overdue-alert {
+    background-color: #fff5f5;
+    border-left: 4px solid #fc8181;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #c53030;
+}
+
+.desk-container .overdue-alert strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.desk-container .btn-return {
+    background-color: #48bb78; /* Màu xanh lá thành công */
+    color: white;
+    margin-top: 15px;
+}
+
+.desk-container .btn-return:hover {
+    background-color: #38a169;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+/* Trạng thái không nợ */
+.desk-container .status-clean {
+    color: #38a169;
+    font-weight: bold;
+}

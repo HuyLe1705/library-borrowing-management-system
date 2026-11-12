@@ -1,5 +1,7 @@
+version: '3.8'
+
 services:
-  # 1. Dịch vụ SQL Server Database
+  # 1. SQL Server Database (MSSQL 2022)
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: lbms-sqlserver
@@ -18,7 +20,7 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # 2. Dịch vụ tự động tạo Database LBMS_DB và nạp file database/schema.sql (UTF-8)
+  # 2. Tự động khởi tạo Database LBMS_DB và nạp schema.sql
   db-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: lbms-db-init
@@ -26,7 +28,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./database:/database:ro
+      - ./backend/database:/database:ro
     entrypoint: >
       /bin/bash -c "
       echo 'Dang khoi tao Database LBMS_DB...';
@@ -36,10 +38,10 @@ services:
       echo 'Khoi tao Database thanh cong!';
       "
 
-  # 3. Dịch vụ Node.js Backend
+  # 3. Node.js Backend API (Express.js)
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: lbms-backend
     ports:
@@ -59,7 +61,20 @@ services:
       db-init:
         condition: service_completed_successfully
     volumes:
-      - ./src:/app/src
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+    restart: unless-stopped
+
+  # 4. React Frontend (Web client với Nginx reverse proxy)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lbms-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
