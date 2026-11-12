@@ -51,6 +51,36 @@ const borrowRequestController = {
             data,
         });
     }),
+
+    // Thủ thư / Quản trị viên duyệt yêu cầu mượn sách (PATCH /:id/approve)
+    approveRequest: asyncHandler(async (req, res) => {
+        const payload = {
+            status: 'APPROVED',
+            adminNote: req.body?.adminNote || req.body?.note || 'Đã duyệt yêu cầu mượn sách.',
+            copyId: req.body?.copyId,
+            pickupDeadline: req.body?.pickupDeadline,
+        };
+        const data = await borrowRequestService.updateStatus(req.params.id, payload, req.user);
+        res.status(200).json({
+            success: true,
+            message: 'Phê duyệt yêu cầu mượn sách thành công.',
+            data,
+        });
+    }),
+
+    // Thủ thư / Quản trị viên từ chối yêu cầu mượn sách (PATCH /:id/reject)
+    rejectRequest: asyncHandler(async (req, res) => {
+        const payload = {
+            status: 'REJECTED',
+            adminNote: req.body?.adminNote || req.body?.note || req.body?.reason || 'Từ chối bởi thủ thư.',
+        };
+        const data = await borrowRequestService.updateStatus(req.params.id, payload, req.user);
+        res.status(200).json({
+            success: true,
+            message: 'Từ chối yêu cầu mượn sách thành công.',
+            data,
+        });
+    }),
 };
 
 module.exports = borrowRequestController;

@@ -8,9 +8,9 @@ const PORT = 5000;
 // 1. Cấu hình kết nối SQL Server
 const dbConfig = {
   user: "sa",
-  password: "YourStrong@Password123",
+  password: "12345",
   server: "localhost", // SỬA: Phải là localhost hoặc 127.0.0.1
-  database: "LBMS_DB",
+  database: "LibDB",
   port: 1433,
   options: {
     encrypt: true,
