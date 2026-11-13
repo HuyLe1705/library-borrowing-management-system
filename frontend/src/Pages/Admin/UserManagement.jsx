@@ -283,8 +283,9 @@ function UserManagement() {
                         >
                             <option value="ALL">Tất cả vai trò</option>
                             <option value="ADMIN">ADMIN</option>
-                            <option value="USER">USER</option>
                             <option value="LIBRARIAN">LIBRARIAN</option>
+                            <option value="LECTURER">LECTURER</option>
+                            <option value="STUDENT">STUDENT</option>
                         </select>
                     </label>
                 </div>
@@ -340,7 +341,7 @@ function UserManagement() {
                                 paginatedUsers.map((user, index) => {
                                     const id = user.id ?? user.userId;
                                     const roles = getRoles(user);
-                                    const selectedRole = roles[0] || 'USER';
+                                    const selectedRole = roles[0] || 'STUDENT';
                                     const displayName =
                                         user.fullName || user.name || 'Chưa cập nhật';
                                     const isSaving = savingId === id;
@@ -409,11 +410,10 @@ function UserManagement() {
                                                         }
                                                         aria-label={`Đổi vai trò cho ${user.username || id}`}
                                                     >
-                                                        <option value="USER">USER</option>
+                                                        <option value="STUDENT">STUDENT</option>
+                                                        <option value="LECTURER">LECTURER</option>
+                                                        <option value="LIBRARIAN">LIBRARIAN</option>
                                                         <option value="ADMIN">ADMIN</option>
-                                                        <option value="LIBRARIAN">
-                                                            LIBRARIAN
-                                                        </option>
                                                     </select>
 
                                                     {isSaving && (

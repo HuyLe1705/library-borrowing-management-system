@@ -1,4 +1,5 @@
 const bookRepository = require('../repositories/book.repository');
+const categoryRepository = require('../repositories/category.repository');
 const HttpError = require('../utils/httpError');
 
 const parseId = (value) => {
@@ -20,12 +21,13 @@ const validateBook = (book) => {
         throw new HttpError(400, 'Tên sách không được để trống.');
     }
 
+    const yearVal = book.year ?? book.publicationYear ?? book.publish_year;
     if (
-        book.year !== undefined &&
-        book.year !== null &&
-        book.year !== ''
+        yearVal !== undefined &&
+        yearVal !== null &&
+        yearVal !== ''
     ) {
-        const year = Number(book.year);
+        const year = Number(yearVal);
 
         if (!Number.isInteger(year) || year < 1 || year > 9999) {
             throw new HttpError(400, 'Năm xuất bản không hợp lệ.');
@@ -128,20 +130,40 @@ const bookService = {
             }
         }
 
-        if (bookData.categoryId) {
-            const category = await bookRepository.findCategoryById(Number(bookData.categoryId));
+        let categoryId = (bookData.categoryId !== undefined && bookData.categoryId !== null && bookData.categoryId !== '')
+            ? Number(bookData.categoryId)
+            : null;
+
+        if (categoryId) {
+            const category = await bookRepository.findCategoryById(categoryId);
             if (!category) {
                 throw new HttpError(400, 'Thể loại không tồn tại.');
             }
+        } else if (bookData.category && typeof bookData.category === 'string' && bookData.category.trim()) {
+            const found = await categoryRepository.findByName(bookData.category.trim());
+            if (found) {
+                categoryId = found.id;
+            }
         }
 
-        const coverUrl = bookData.coverUrl ? String(bookData.coverUrl).trim() : null;
+        const rawCoverUrl = bookData.coverUrl ?? bookData.cover_url ?? bookData.CoverURL;
+        const coverUrl = rawCoverUrl ? String(rawCoverUrl).trim() : null;
+
+        const rawYear = bookData.year ?? bookData.publicationYear ?? bookData.publish_year;
+        const year = (rawYear !== undefined && rawYear !== null && rawYear !== '')
+            ? Number(rawYear)
+            : null;
 
         return bookRepository.create({
             ...bookData,
             title: bookData.title.trim(),
+            author: bookData.author ? String(bookData.author).trim() : 'Chưa rõ',
             isbn: bookData.isbn?.trim() || null,
+            categoryId,
+            year,
             coverUrl,
+            totalCopies: bookData.totalCopies !== undefined ? Number(bookData.totalCopies) : undefined,
+            availableCopies: bookData.availableCopies !== undefined ? Number(bookData.availableCopies) : undefined,
         });
     },
 
@@ -159,20 +181,40 @@ const bookService = {
             }
         }
 
-        if (bookData.categoryId) {
-            const category = await bookRepository.findCategoryById(Number(bookData.categoryId));
+        let categoryId = (bookData.categoryId !== undefined && bookData.categoryId !== null && bookData.categoryId !== '')
+            ? Number(bookData.categoryId)
+            : null;
+
+        if (categoryId) {
+            const category = await bookRepository.findCategoryById(categoryId);
             if (!category) {
                 throw new HttpError(400, 'Thể loại không tồn tại.');
             }
+        } else if (bookData.category && typeof bookData.category === 'string' && bookData.category.trim()) {
+            const found = await categoryRepository.findByName(bookData.category.trim());
+            if (found) {
+                categoryId = found.id;
+            }
         }
 
-        const coverUrl = bookData.coverUrl ? String(bookData.coverUrl).trim() : null;
+        const rawCoverUrl = bookData.coverUrl ?? bookData.cover_url ?? bookData.CoverURL;
+        const coverUrl = rawCoverUrl ? String(rawCoverUrl).trim() : null;
+
+        const rawYear = bookData.year ?? bookData.publicationYear ?? bookData.publish_year;
+        const year = (rawYear !== undefined && rawYear !== null && rawYear !== '')
+            ? Number(rawYear)
+            : null;
 
         const updatedBook = await bookRepository.update(id, {
             ...bookData,
             title: bookData.title.trim(),
+            author: bookData.author ? String(bookData.author).trim() : 'Chưa rõ',
             isbn: bookData.isbn?.trim() || null,
+            categoryId,
+            year,
             coverUrl,
+            totalCopies: bookData.totalCopies !== undefined ? Number(bookData.totalCopies) : undefined,
+            availableCopies: bookData.availableCopies !== undefined ? Number(bookData.availableCopies) : undefined,
         });
 
         if (!updatedBook) {

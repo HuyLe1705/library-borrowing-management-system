@@ -252,6 +252,27 @@ const bookRepository = {
                     INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status)
                     VALUES (@bookId, @barcode, @shelfLocation, 'AVAILABLE');
                 `);
+            } else {
+                // Tự động tạo bản sao theo totalCopies (mặc định ít nhất 1 bản sao nếu không chỉ định)
+                const numCopies = Math.max(1, Number(book.totalCopies) || 1);
+                const numAvailable = (book.availableCopies !== undefined && book.availableCopies !== null && !isNaN(Number(book.availableCopies)))
+                    ? Math.max(0, Math.min(Number(book.availableCopies), numCopies))
+                    : numCopies;
+
+                for (let i = 1; i <= numCopies; i++) {
+                    const copyReq = new sql.Request(transaction);
+                    const barcode = `BC-${String(newBookId).padStart(4, '0')}-${String(i).padStart(3, '0')}`;
+                    const status = i <= numAvailable ? 'AVAILABLE' : 'MAINTENANCE';
+                    copyReq.input('bookId', sql.Int, newBookId);
+                    copyReq.input('barcode', sql.VarChar, barcode);
+                    copyReq.input('shelfLocation', sql.NVarChar, book.shelfLocation || 'Kệ Tổng hợp');
+                    copyReq.input('status', sql.VarChar, status);
+
+                    await copyReq.query(`
+                        INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status)
+                        VALUES (@bookId, @barcode, @shelfLocation, @status);
+                    `);
+                }
             }
 
             await transaction.commit();
@@ -265,42 +286,128 @@ const bookRepository = {
     // Cập nhật thông tin sách
     async update(id, book) {
         const pool = await getPool();
-        const request = pool.request();
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
 
-        request.input('id', sql.Int, id);
-        request.input('title', sql.NVarChar, book.title);
-        request.input('isbn', sql.VarChar, book.isbn || null);
-        request.input('author', sql.NVarChar, book.author || 'Chưa rõ');
-        request.input('categoryId', sql.Int, book.categoryId ? Number(book.categoryId) : null);
-        request.input('publisher', sql.NVarChar, book.publisher || null);
-        request.input('year', sql.Int, book.year ?? null);
-        request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
-        request.input('description', sql.NVarChar, book.description || null);
-        request.input('coverURL', sql.NVarChar, book.coverUrl ? String(book.coverUrl).trim() : null);
+        try {
+            const request = new sql.Request(transaction);
 
-        const result = await request.query(`
-            UPDATE dbo.books
-            SET
-                title = @title,
-                isbn = @isbn,
-                author = @author,
-                category_id = @categoryId,
-                publisher = @publisher,
-                publish_year = @year,
-                language = @language,
-                description = @description,
-                cover_url = @coverURL,
-                updated_at = SYSDATETIME()
-            WHERE id = @id;
+            request.input('id', sql.Int, id);
+            request.input('title', sql.NVarChar, book.title);
+            request.input('isbn', sql.VarChar, book.isbn || null);
+            request.input('author', sql.NVarChar, book.author || 'Chưa rõ');
+            request.input('categoryId', sql.Int, book.categoryId ? Number(book.categoryId) : null);
+            request.input('publisher', sql.NVarChar, book.publisher || null);
+            request.input('year', sql.Int, book.year ?? null);
+            request.input('language', sql.NVarChar, book.language || 'Tiếng Việt');
+            request.input('description', sql.NVarChar, book.description || null);
+            request.input('coverURL', sql.NVarChar, book.coverUrl ? String(book.coverUrl).trim() : null);
 
-            SELECT @@ROWCOUNT AS affectedRows;
-        `);
+            const result = await request.query(`
+                UPDATE dbo.books
+                SET
+                    title = @title,
+                    isbn = @isbn,
+                    author = @author,
+                    category_id = @categoryId,
+                    publisher = @publisher,
+                    publish_year = @year,
+                    language = @language,
+                    description = @description,
+                    cover_url = @coverURL,
+                    updated_at = SYSDATETIME()
+                WHERE id = @id;
 
-        if (result.recordset[0].affectedRows === 0) {
-            return null;
+                SELECT @@ROWCOUNT AS affectedRows;
+            `);
+
+            if (result.recordset[0].affectedRows === 0) {
+                await transaction.rollback();
+                return null;
+            }
+
+            // Đồng bộ số lượng bản sao nếu client truyền totalCopies
+            if (book.totalCopies !== undefined && book.totalCopies !== null && !isNaN(Number(book.totalCopies))) {
+                const targetTotal = Math.max(0, Number(book.totalCopies));
+                const targetAvailable = (book.availableCopies !== undefined && book.availableCopies !== null && !isNaN(Number(book.availableCopies)))
+                    ? Math.max(0, Math.min(Number(book.availableCopies), targetTotal))
+                    : null;
+
+                const copiesResult = await new sql.Request(transaction)
+                    .input('bookId', sql.Int, id)
+                    .query(`SELECT id, barcode, status FROM dbo.book_copies WHERE book_id = @bookId ORDER BY id ASC;`);
+
+                const existingCopies = copiesResult.recordset;
+                const currentTotal = existingCopies.length;
+
+                if (targetTotal > currentTotal) {
+                    for (let i = currentTotal + 1; i <= targetTotal; i++) {
+                        const copyReq = new sql.Request(transaction);
+                        const barcode = `BC-${String(id).padStart(4, '0')}-${String(i).padStart(3, '0')}`;
+                        copyReq.input('bookId', sql.Int, id);
+                        copyReq.input('barcode', sql.VarChar, barcode);
+                        copyReq.input('shelfLocation', sql.NVarChar, 'Kệ Tổng hợp');
+
+                        await copyReq.query(`
+                            INSERT INTO dbo.book_copies (book_id, barcode, shelf_location, status)
+                            VALUES (@bookId, @barcode, @shelfLocation, 'AVAILABLE');
+                        `);
+                    }
+                } else if (targetTotal < currentTotal) {
+                    const excess = currentTotal - targetTotal;
+                    await new sql.Request(transaction)
+                        .input('bookId', sql.Int, id)
+                        .input('limit', sql.Int, excess)
+                        .query(`
+                            DELETE FROM dbo.book_copies
+                            WHERE id IN (
+                                SELECT TOP (@limit) bc.id
+                                FROM dbo.book_copies bc
+                                WHERE bc.book_id = @bookId
+                                  AND bc.status = 'AVAILABLE'
+                                  AND NOT EXISTS (SELECT 1 FROM dbo.borrow_records br WHERE br.copy_id = bc.id)
+                                  AND NOT EXISTS (SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id = bc.id)
+                                ORDER BY bc.id DESC
+                            );
+                        `);
+                }
+
+                if (targetAvailable !== null) {
+                    const currentAvailableRes = await new sql.Request(transaction)
+                        .input('bookId', sql.Int, id)
+                        .query(`
+                            SELECT id, status FROM dbo.book_copies 
+                            WHERE book_id = @bookId 
+                            ORDER BY CASE WHEN status = 'AVAILABLE' THEN 1 WHEN status = 'MAINTENANCE' THEN 2 ELSE 3 END, id ASC;
+                        `);
+                    const allCopies = currentAvailableRes.recordset;
+                    const availCopies = allCopies.filter(c => c.status === 'AVAILABLE');
+                    const maintCopies = allCopies.filter(c => c.status === 'MAINTENANCE');
+
+                    if (targetAvailable < availCopies.length) {
+                        const diff = availCopies.length - targetAvailable;
+                        const toMaint = availCopies.slice(-diff).map(c => c.id);
+                        if (toMaint.length > 0) {
+                            await new sql.Request(transaction)
+                                .query(`UPDATE dbo.book_copies SET status = 'MAINTENANCE' WHERE id IN (${toMaint.join(',')});`);
+                        }
+                    } else if (targetAvailable > availCopies.length && maintCopies.length > 0) {
+                        const diff = targetAvailable - availCopies.length;
+                        const toAvail = maintCopies.slice(0, diff).map(c => c.id);
+                        if (toAvail.length > 0) {
+                            await new sql.Request(transaction)
+                                .query(`UPDATE dbo.book_copies SET status = 'AVAILABLE' WHERE id IN (${toAvail.join(',')});`);
+                        }
+                    }
+                }
+            }
+
+            await transaction.commit();
+            return await this.findById(id);
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
-
-        return await this.findById(id);
     },
 
     // Xóa sách

@@ -23,7 +23,8 @@ const userService = {
 
         let role = undefined;
         if (query.role) {
-            const normalizedRole = String(query.role).trim().toUpperCase();
+            let normalizedRole = String(query.role).trim().toUpperCase();
+            if (normalizedRole === 'USER') normalizedRole = 'STUDENT';
             if (!ALLOWED_ROLES.includes(normalizedRole)) {
                 throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
             }
@@ -102,7 +103,8 @@ const userService = {
 
         let safeRole = 'STUDENT';
         if (role !== undefined && role !== null && String(role).trim() !== '') {
-            const normalizedRole = String(role).trim().toUpperCase();
+            let normalizedRole = String(role).trim().toUpperCase();
+            if (normalizedRole === 'USER') normalizedRole = 'STUDENT';
             if (!ALLOWED_ROLES.includes(normalizedRole)) {
                 throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
             }
@@ -232,7 +234,8 @@ const userService = {
         }
 
         if (payload.role !== undefined) {
-            const normalizedRole = String(payload.role).trim().toUpperCase();
+            let normalizedRole = String(payload.role).trim().toUpperCase();
+            if (normalizedRole === 'USER') normalizedRole = 'STUDENT';
             if (!ALLOWED_ROLES.includes(normalizedRole)) {
                 throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
             }
@@ -279,7 +282,10 @@ const userService = {
             throw new HttpError(400, 'Vai trò mới (role) không được để trống.');
         }
 
-        const normalizedRole = role.trim().toUpperCase();
+        let normalizedRole = role.trim().toUpperCase();
+        if (normalizedRole === 'USER') {
+            normalizedRole = 'STUDENT';
+        }
         if (!ALLOWED_ROLES.includes(normalizedRole)) {
             throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
         }
