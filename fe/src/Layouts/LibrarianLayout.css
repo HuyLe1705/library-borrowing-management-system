@@ -1,0 +1,584 @@
+/* =========================================
+   LIBRARIAN LAYOUT - GLOBAL STRUCTURE
+========================================= */
+
+.librarian-layout {
+  --lib-primary: #2563eb;
+  --lib-primary-hover: #1d4ed8;
+  --lib-sidebar: #111827;
+  --lib-sidebar-hover: #1e293b;
+  --lib-text: #1e293b;
+  --lib-muted: #64748b;
+  --lib-border: #e2e8f0;
+  --lib-background: #f4f7fb;
+
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: var(--lib-background);
+  color: var(--lib-text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.librarian-layout *,
+.librarian-layout *::before,
+.librarian-layout *::after {
+  box-sizing: border-box;
+}
+
+.librarian-layout button,
+.librarian-layout input,
+.librarian-layout select,
+.librarian-layout textarea {
+  font: inherit;
+}
+
+/* =========================================
+   SIDEBAR
+========================================= */
+
+.librarian-sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex: 0 0 250px;
+  flex-direction: column;
+  width: 250px;
+  height: 100vh;
+  min-height: 100vh;
+  padding: 20px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--lib-sidebar);
+  color: #f8fafc;
+  border-right: 1px solid #1e293b;
+}
+
+.librarian-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 55px;
+  margin-bottom: 28px;
+  padding: 0 4px;
+}
+
+.librarian-brand-icon {
+  display: flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--lib-primary);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.librarian-brand h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 19px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.librarian-brand span {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Profile card */
+
+.librarian-profile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  margin-bottom: 27px;
+  padding: 14px 11px;
+  border: 1px solid #2b3547;
+  border-radius: 12px;
+  background: #1e293b;
+}
+
+.librarian-avatar {
+  display: flex;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.librarian-profile-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.librarian-profile-info strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.librarian-profile-info span {
+  color: #94a3b8;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+}
+
+.librarian-online-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* Navigation */
+
+.librarian-nav-heading {
+  margin: 0 0 10px;
+  padding: 0 12px;
+  color: #8290a7;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.2px;
+}
+
+.librarian-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.librarian-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #b8c4d6;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.librarian-nav-link:hover {
+  background: var(--lib-sidebar-hover);
+  color: #fff;
+}
+
+.librarian-nav-link.active {
+  background: var(--lib-primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgb(37 99 235 / 20%);
+}
+
+.librarian-nav-icon {
+  display: inline-flex;
+  flex: 0 0 19px;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Sidebar bottom */
+
+.librarian-sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.librarian-help-card {
+  padding: 14px;
+  border: 1px solid #2b3547;
+  border-radius: 11px;
+  background: #1e293b;
+}
+
+.librarian-help-card strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.librarian-help-card p {
+  margin: 0;
+  color: #a8b6ca;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* =========================================
+   MAIN CONTENT
+========================================= */
+
+.librarian-main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: 0;
+  min-width: 0;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: var(--lib-background);
+}
+
+/* =========================================
+   TOPBAR
+========================================= */
+
+.librarian-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex: 0 0 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 0 28px;
+  border-bottom: 1px solid #e8edf5;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 2%);
+}
+
+.librarian-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.librarian-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.librarian-breadcrumb > span:first-child {
+  color: #64748b;
+}
+
+.librarian-breadcrumb-divider {
+  color: #cbd5e1;
+}
+
+.librarian-breadcrumb strong {
+  color: #1e293b;
+  font-weight: 650;
+}
+
+.librarian-topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  min-width: 0;
+}
+
+.librarian-status {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.librarian-status > span {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* Account information */
+
+.librarian-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 18px;
+  border-left: 1px solid #e8edf5;
+}
+
+.librarian-topbar-avatar {
+  display: flex;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #dbeafe;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.librarian-account-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 65px;
+  gap: 2px;
+}
+
+.librarian-account-info strong {
+  display: block;
+  max-width: 140px;
+  overflow: hidden;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.librarian-account-info span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+/* Logout button */
+
+.librarian-logout-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  margin-left: 5px;
+  padding: 9px 13px;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.librarian-logout-button:hover {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.librarian-logout-button:focus-visible {
+  outline: 2px solid #f87171;
+  outline-offset: 3px;
+}
+
+/* Mobile menu button: hidden on desktop */
+
+.librarian-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  color: #334155;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.librarian-sidebar-overlay {
+  display: none;
+}
+
+/* =========================================
+   PAGE CONTENT
+========================================= */
+
+.librarian-content {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 28px;
+  background: var(--lib-background);
+}
+
+/*
+  Không có footer trong layout thủ thư.
+  Nội dung được phép mở rộng hết chiều cao còn lại.
+*/
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1100px) {
+  .librarian-topbar {
+    padding: 0 20px;
+  }
+
+  .librarian-content {
+    padding: 22px;
+  }
+
+  .librarian-status {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .librarian-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 101;
+    width: 250px;
+    height: 100dvh;
+    min-height: 0;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .librarian-sidebar.librarian-sidebar-open {
+    transform: translateX(0);
+  }
+
+  .librarian-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: rgb(15 23 42 / 48%);
+    cursor: pointer;
+  }
+
+  .librarian-menu-toggle {
+    display: inline-flex;
+  }
+
+  .librarian-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .librarian-topbar {
+    padding: 0 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .librarian-topbar {
+    min-height: 64px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .librarian-topbar-left,
+  .librarian-topbar-right {
+    gap: 8px;
+  }
+
+  .librarian-breadcrumb {
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .librarian-breadcrumb strong {
+    max-width: 105px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .librarian-account {
+    gap: 7px;
+    padding-left: 8px;
+  }
+
+  .librarian-account-info {
+    display: none;
+  }
+
+  .librarian-topbar-avatar {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .librarian-logout-button {
+    width: 36px;
+    min-height: 36px;
+    margin-left: 0;
+    padding: 7px;
+    font-size: 0;
+  }
+
+  .librarian-logout-button span {
+    font-size: 17px;
+  }
+
+  .librarian-content {
+    padding: 16px 12px;
+  }
+}

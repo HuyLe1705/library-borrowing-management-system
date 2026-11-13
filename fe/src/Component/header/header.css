@@ -1,0 +1,712 @@
+/* =====================================================
+   BK LIBRARY — PUBLIC HEADER
+   ===================================================== */
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+
+    width: 100%;
+    height: 76px;
+    padding: 0 6%;
+    box-sizing: border-box;
+
+    background: rgba(255, 255, 255, 0.97);
+    border-bottom: 1px solid #e8edf5;
+    box-shadow: 0 3px 16px rgba(15, 35, 75, 0.045);
+
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+}
+
+/* ================= Logo ================= */
+
+.header-left {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.header-left .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+
+    color: #12336b;
+    text-decoration: none;
+
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.6px;
+
+    white-space: nowrap;
+}
+
+.header-left .logo img {
+    display: block;
+    width: 44px;
+    height: 44px;
+
+    object-fit: contain;
+    border-radius: 10px;
+
+    transition: transform 0.25s ease;
+}
+
+.header-left .logo:hover img {
+    transform: translateY(-2px);
+}
+
+.header-left .logo:focus-visible {
+    outline: 3px solid rgba(40, 120, 237, 0.3);
+    outline-offset: 5px;
+    border-radius: 5px;
+}
+
+/* ================= Navigation ================= */
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    min-width: 0;
+}
+
+.header-nav a {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 11px 13px;
+    border-radius: 9px;
+
+    color: #536178;
+    text-decoration: none;
+    white-space: nowrap;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.header-nav a:hover {
+    color: #1769e0;
+    background: #f3f7ff;
+}
+
+.header-nav a.active {
+    color: #1769e0;
+    background: #edf4ff;
+}
+
+.header-nav a.active::after {
+    content: '';
+
+    position: absolute;
+    bottom: -7px;
+    left: 18%;
+
+    width: 64%;
+    height: 3px;
+
+    background: #2878ed;
+    border-radius: 5px;
+}
+
+.header-nav a:focus-visible {
+    outline: 3px solid rgba(40, 120, 237, 0.3);
+    outline-offset: 3px;
+}
+
+/* ================= Right Account Area ================= */
+
+.header-right {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* Chưa đăng nhập: nút chữ Đăng nhập */
+
+.login-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 2px;
+    border: none;
+    border-radius: 7px;
+
+    background: transparent;
+    color: #1769e0;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+    white-space: nowrap;
+
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.login-link svg {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+}
+
+.login-link:hover {
+    color: #124bb4;
+}
+
+.login-link:active {
+    transform: translateY(1px);
+}
+
+.login-link:focus-visible,
+.account-trigger:focus-visible,
+.header-toggle:focus-visible {
+    outline: 3px solid rgba(40, 120, 237, 0.3);
+    outline-offset: 4px;
+}
+
+/* Đã đăng nhập: avatar + tên, không có khung */
+
+.account-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    max-width: 240px;
+    padding: 5px 0 5px 5px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: transparent;
+    color: #17396f;
+
+    font-family: inherit;
+    text-align: left;
+
+    cursor: pointer;
+
+    transition: color 0.2s ease;
+}
+
+.account-trigger:hover,
+.account-trigger.is-open {
+    color: #1769e0;
+}
+
+.admin-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 38px;
+    height: 38px;
+
+    border: 1px solid #dce9ff;
+    border-radius: 50%;
+
+    background: #eaf2ff;
+    color: #1769e0;
+
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.admin-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+
+    min-width: 0;
+}
+
+.account-name {
+    display: block;
+
+    max-width: 145px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    color: #243b61;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.account-trigger:hover .account-name,
+.account-trigger.is-open .account-name {
+    color: #1769e0;
+}
+
+.admin-label small {
+    color: #8793a7;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.account-arrow {
+    display: block;
+    flex-shrink: 0;
+
+    width: 16px;
+    height: 16px;
+
+    color: #7c8ba3;
+
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease;
+}
+
+.account-arrow.rotated {
+    transform: rotate(180deg);
+    color: #1769e0;
+}
+
+/* ================= Account Dropdown ================= */
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 13px);
+    right: 0;
+    z-index: 1100;
+
+    width: 310px;
+    max-width: calc(100vw - 24px);
+    padding: 10px;
+
+    background: #ffffff;
+    border: 1px solid #e8edf5;
+    border-radius: 16px;
+    box-shadow: 0 16px 45px rgba(22, 48, 91, 0.14);
+
+    animation: dropdown-appear 0.18s ease-out;
+}
+
+/* Phần thông tin người dùng */
+
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 12px 10px 14px;
+}
+
+.account-avatar-large {
+    width: 44px;
+    height: 44px;
+
+    font-size: 16px;
+}
+
+.account-info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    min-width: 0;
+}
+
+.account-info-text strong {
+    display: block;
+
+    overflow: hidden;
+    color: #17396f;
+
+    font-size: 14px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-info-text small {
+    color: #8a96a9;
+    font-size: 11px;
+}
+
+/* Đường phân cách */
+
+.account-divider {
+    height: 1px;
+    margin: 3px 2px 8px;
+
+    background: #edf0f5;
+}
+
+.account-divider-bottom {
+    margin: 8px 2px;
+}
+
+/* Danh sách chức năng */
+
+.account-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: transparent;
+    color: #34445f;
+
+    font-family: inherit;
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.account-menu-item:hover {
+    background: #f3f7ff;
+    color: #1769e0;
+}
+
+.account-menu-item:focus-visible,
+.logout-button:focus-visible {
+    outline: 2px solid rgba(40, 120, 237, 0.45);
+    outline-offset: 2px;
+}
+
+.account-menu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 36px;
+    height: 36px;
+
+    border-radius: 10px;
+
+    background: #f0f5ff;
+    color: #3675dc;
+
+    font-size: 19px;
+    font-weight: 600;
+}
+
+.account-menu-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    min-width: 0;
+}
+
+.account-menu-copy > span {
+    color: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.account-menu-copy small {
+    color: #8a96a9;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* ================= Logout ================= */
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    width: 100%;
+    padding: 11px 10px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: transparent;
+    color: #d44848;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.logout-button svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.logout-button:hover {
+    background: #fff1f0;
+    color: #bd2525;
+}
+
+/* ================= Dropdown Animation ================= */
+
+@keyframes dropdown-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================= Mobile Menu Button ================= */
+
+.header-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    width: 40px;
+    height: 40px;
+
+    border: 1px solid #e1e8f2;
+    border-radius: 10px;
+
+    background: #ffffff;
+    color: #17396f;
+
+    font-family: inherit;
+    font-size: 23px;
+    line-height: 1;
+
+    cursor: pointer;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.header-toggle:hover {
+    background: #f3f7ff;
+    border-color: #cbdcf8;
+}
+
+/* ================= Responsive: Tablet ================= */
+
+@media screen and (max-width: 1150px) {
+    .header {
+        gap: 14px;
+        padding: 0 24px;
+    }
+
+    .header-left .logo {
+        gap: 8px;
+        font-size: 19px;
+    }
+
+    .header-left .logo img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .header-nav {
+        gap: 2px;
+    }
+
+    .header-nav a {
+        padding: 10px 9px;
+        font-size: 13px;
+    }
+
+    .account-trigger {
+        gap: 8px;
+    }
+
+    .account-name {
+        max-width: 115px;
+    }
+}
+
+/* ================= Responsive: Mobile ================= */
+
+@media screen and (max-width: 900px) {
+    .header {
+        height: 70px;
+        gap: 12px;
+        padding: 0 20px;
+    }
+
+    .header-left .logo {
+        font-size: 18px;
+    }
+
+    .header-toggle {
+        display: inline-flex;
+        order: 3;
+    }
+
+    .header-right {
+        margin-left: auto;
+    }
+
+    .header-nav {
+        display: none;
+
+        position: absolute;
+        top: calc(100% + 1px);
+        left: 0;
+        right: 0;
+        z-index: 1050;
+
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
+
+        padding: 14px 20px 18px;
+
+        background: #ffffff;
+        border-bottom: 1px solid #e8edf5;
+        box-shadow: 0 10px 24px rgba(15, 35, 75, 0.09);
+    }
+
+    .header-nav.open {
+        display: flex;
+    }
+
+    .header-nav a {
+        justify-content: flex-start;
+        padding: 13px 14px;
+        font-size: 14px;
+    }
+
+    .header-nav a.active::after {
+        display: none;
+    }
+
+    .header-nav a.active {
+        background: #edf4ff;
+    }
+
+    .account-dropdown {
+        top: calc(100% + 10px);
+    }
+}
+
+/* ================= Responsive: Small Mobile ================= */
+
+@media screen and (max-width: 480px) {
+    .header {
+        gap: 8px;
+        padding: 0 12px;
+    }
+
+    .header-left .logo {
+        gap: 7px;
+        font-size: 16px;
+        letter-spacing: -0.4px;
+    }
+
+    .header-left .logo img {
+        width: 34px;
+        height: 34px;
+    }
+
+    .header-toggle {
+        width: 36px;
+        height: 36px;
+        font-size: 21px;
+    }
+
+    .account-trigger {
+        gap: 6px;
+        padding-left: 0;
+    }
+
+    .account-trigger > .admin-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 12px;
+    }
+
+    .admin-label {
+        display: none;
+    }
+
+    .account-arrow {
+        width: 14px;
+        height: 14px;
+    }
+
+    .account-dropdown {
+        right: -44px;
+        width: min(310px, calc(100vw - 24px));
+    }
+
+    .login-link {
+        gap: 5px;
+        font-size: 12px;
+    }
+
+    .login-link svg {
+        width: 17px;
+        height: 17px;
+    }
+}
+
+/* ================= Reduced Motion ================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .header *,
+    .header *::before,
+    .header *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

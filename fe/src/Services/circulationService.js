@@ -1,0 +1,10 @@
+import { apiRequest, unwrapData } from './apiClient';
+const call = async (path, options) => unwrapData(await apiRequest(path, options));
+export const getRenewalRequests = (params) => call('/renewal-requests', { params });
+export const createRenewalRequest = (borrowRecordId, note) => call('/renewal-requests', { method: 'POST', body: { borrowRecordId, note } });
+export const decideRenewal = (id, action, adminNote) => call(`/renewal-requests/${id}/${action}`, { method: 'PATCH', body: { adminNote } });
+export const getFines = (params) => call('/fines', { params });
+export const createFine = (body) => call('/fines', { method: 'POST', body });
+export const payFine = (id) => call(`/fines/${id}/pay`, { method: 'PATCH' });
+export const getReservations = (params) => call('/borrow-requests', { params });
+export const decideReservation = (id, action, body = {}) => call(`/borrow-requests/${id}/${action}`, { method: 'PATCH', body });
