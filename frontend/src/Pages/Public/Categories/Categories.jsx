@@ -104,10 +104,6 @@ function Categories() {
             {/* Hero */}
             <section className="categories-hero">
                 <div className="categories-hero-content">
-                    <div className="categories-eyebrow">
-                        <span className="categories-eyebrow-dot" />
-                        KHÔNG GIAN TRI THỨC BK LIBRARY
-                    </div>
 
                     <h1>
                         Khám phá thế giới

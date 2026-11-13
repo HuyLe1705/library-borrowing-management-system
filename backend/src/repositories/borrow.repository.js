@@ -161,7 +161,7 @@ const borrowRepository = {
     async createBorrow({ userCode, barcode, librarianCode }) {
         const pool = await getPool();
         const transaction = new sql.Transaction(pool);
-        await transaction.begin();
+        await transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
 
         try {
             const req = new sql.Request(transaction);
@@ -172,7 +172,7 @@ const borrowRepository = {
             // 1. Kiểm tra người mượn
             const userRes = await req.query(`
                 SELECT id, user_code, full_name, role, status
-                FROM dbo.users
+                FROM dbo.users WITH (UPDLOCK, HOLDLOCK)
                 WHERE user_code = @userCode;
             `);
             const borrower = userRes.recordset[0];
@@ -233,6 +233,13 @@ const borrowRepository = {
                 throw new HttpError(409, `Bản sao sách hiện không sẵn sàng cho mượn (Trạng thái: ${copy.status}).`);
             }
 
+            req.input('reservedCopyId', sql.Int, copy.id);
+            const reservation = await req.query(`SELECT id FROM dbo.borrow_requests WITH (UPDLOCK,HOLDLOCK)
+                WHERE copy_id=@reservedCopyId AND status='APPROVED'`);
+            if (reservation.recordset.length) {
+                throw new HttpError(409, 'Bản sao đã được giữ cho yêu cầu mượn. Vui lòng bàn giao từ danh sách yêu cầu.');
+            }
+
             // Chặn 1 độc giả mượn 2 bản sao của cùng 1 đầu sách cùng lúc
             req.input('bookId', sql.Int, copy.book_id);
             const duplicateBookCheck = await req.query(`
@@ -289,7 +296,7 @@ const borrowRepository = {
     async returnBook({ barcode, librarianCode }) {
         const pool = await getPool();
         const transaction = new sql.Transaction(pool);
-        await transaction.begin();
+        await transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
 
         try {
             const req = new sql.Request(transaction);
@@ -303,7 +310,7 @@ const borrowRepository = {
                     br.borrower_id AS borrowerId,
                     br.due_date AS dueDate,
                     DATEDIFF(DAY, br.due_date, CAST(SYSDATETIME() AS DATE)) AS overdueDays
-                FROM dbo.borrow_records br
+                FROM dbo.borrow_records br WITH (UPDLOCK,HOLDLOCK)
                 INNER JOIN dbo.book_copies bc ON bc.id = br.copy_id
                 WHERE bc.barcode = @barcode AND br.status IN ('BORROWED', 'OVERDUE');
             `);
@@ -331,6 +338,9 @@ const borrowRepository = {
                 UPDATE dbo.book_copies
                 SET status = 'AVAILABLE'
                 WHERE id = @copyId;
+
+                UPDATE dbo.renewal_requests SET status='CANCELLED', admin_note=N'Sách đã được trả', reviewed_at=SYSDATETIME()
+                WHERE borrow_record_id=@borrowId AND status='PENDING';
             `);
 
             let fineCreated = null;
@@ -370,69 +380,17 @@ const borrowRepository = {
 
     // Thực hiện Gia hạn sách (Tối đa 1 lần, cộng thêm 7 ngày nếu chưa quá hạn)
     async renewBorrow(borrowId, currentUser = null) {
-        const pool = await getPool();
-        const request = pool.request();
-        request.input('id', sql.Int, borrowId);
-
-        const recordRes = await request.query(`
-            SELECT
-                br.id,
-                br.borrower_id AS borrowerId,
-                u.user_code AS borrowerCode,
-                br.due_date AS dueDate,
-                br.renewal_count AS renewalCount,
-                br.status,
-                u.status AS userStatus,
-                DATEDIFF(DAY, br.due_date, CAST(SYSDATETIME() AS DATE)) AS overdueDays,
-                (SELECT COUNT(*) FROM dbo.fines f
-                 INNER JOIN dbo.borrow_records br2 ON br2.id = f.borrow_record_id
-                 WHERE br2.borrower_id = br.borrower_id AND f.status = 'UNPAID') AS unpaidFines,
-                (SELECT COUNT(*) FROM dbo.borrow_records br3
-                 WHERE br3.borrower_id = br.borrower_id
-                   AND (br3.status = 'OVERDUE' OR (br3.status = 'BORROWED' AND br3.due_date < CAST(SYSDATETIME() AS DATE)))) AS anyOverdue
-            FROM dbo.borrow_records br
-            INNER JOIN dbo.users u ON u.id = br.borrower_id
-            WHERE br.id = @id;
-        `);
-
-        const record = recordRes.recordset[0];
-        if (!record) {
-            throw new HttpError(404, 'Không tìm thấy phiếu mượn.');
-        }
-
-        // Kiểm tra quyền độc giả: độc giả chỉ được phép gia hạn phiếu mượn của chính mình
-        if (currentUser && ['STUDENT', 'LECTURER'].includes(currentUser.role)) {
-            if (record.borrowerId !== currentUser.id && record.borrowerCode !== currentUser.userCode) {
-                throw new HttpError(403, 'Bạn chỉ có quyền gia hạn phiếu mượn của chính mình.');
-            }
-        }
-
-        if (record.userStatus === 'LOCKED' || record.unpaidFines > 0 || record.anyOverdue > 0) {
-            throw new HttpError(403, 'Không thể gia hạn vì độc giả đang bị khóa thẻ, có sách quá hạn hoặc nợ tiền phạt chưa đóng.');
-        }
-        if (record.status !== 'BORROWED' || record.overdueDays > 0) {
-            throw new HttpError(400, 'Chỉ có thể gia hạn sách đang mượn và chưa bị quá hạn.');
-        }
-        if (record.renewalCount >= 1) {
-            throw new HttpError(400, 'Phiếu mượn này đã hết số lần gia hạn tối đa (1 lần).');
-        }
-
-        const updateRes = await request.query(`
-            UPDATE dbo.borrow_records
-            SET due_date = DATEADD(DAY, 7, due_date),
-                renewal_count = renewal_count + 1
-            OUTPUT INSERTED.id, INSERTED.due_date AS newDueDate, INSERTED.renewal_count AS renewalCount
-            WHERE id = @id;
-        `);
-
-        return updateRes.recordset[0];
+        const repository = require('./renewalRequest.repository');
+        const request = await repository.create(borrowId, null, currentUser);
+        const result = await repository.decide(request.id, 'APPROVED', null, currentUser);
+        return { id: borrowId, newDueDate: result.newDueDate, renewalCount: 1 };
     },
 
     // Thanh toán tiền phạt và mở khóa thẻ cho độc giả
     async payFine(fineId) {
         const pool = await getPool();
         const transaction = new sql.Transaction(pool);
-        await transaction.begin();
+        await transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
 
         try {
             const req = new sql.Request(transaction);
@@ -440,7 +398,7 @@ const borrowRepository = {
 
             const fineRes = await req.query(`
                 SELECT f.id, f.status, br.borrower_id AS borrowerId
-                FROM dbo.fines f
+                FROM dbo.fines f WITH (UPDLOCK,HOLDLOCK)
                 INNER JOIN dbo.borrow_records br ON br.id = f.borrow_record_id
                 WHERE f.id = @fineId;
             `);

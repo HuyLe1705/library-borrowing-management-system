@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './LibrarianPages.css';
+import { getBooks } from '../../Services/bookService';
+import Pagination from '../../Component/common/Pagination';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -7,36 +9,22 @@ function getToken() {
     return localStorage.getItem('token');
 }
 
-async function fetchBooks(search = '') {
-    const params = new URLSearchParams();
+async function fetchBooks(keyword = '', page = 1, size = 10) {
+    const response = await getBooks({
+        page,
+        size,
+        keyword: keyword.trim() || undefined,
+    });
 
-    if (search.trim()) {
-        params.set('search', search.trim());
-    }
-
-    const response = await fetch(
-        `${API_URL}/books?${params.toString()}`,
-        {
-            headers: {
-                Authorization: `Bearer ${getToken()}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error('Không thể tải danh sách sách.');
-    }
-
-    const result = await response.json();
-
-    // Hỗ trợ một số dạng response API phổ biến
-    const data = result.data ?? result;
-
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.books)) return data.books;
-    if (Array.isArray(data.items)) return data.items;
-
-    return [];
+    return {
+        books: Array.isArray(response?.items) ? response.items : [],
+        pagination: response?.pagination ?? {
+            page,
+            size,
+            total: 0,
+            totalPages: 0,
+        },
+    };
 }
 
 export default function BookLookup() {
@@ -44,20 +32,36 @@ export default function BookLookup() {
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [pagination, setPagination] = useState({
+        page: 1,
+        size: 10,
+        total: 0,
+        totalPages: 0,
+    });
 
-    const loadBooks = async (search = '') => {
+    async function loadBooks(search = keyword, page = 1) {
         try {
             setLoading(true);
             setError('');
 
-            const data = await fetchBooks(search);
-            setBooks(data);
+            const result = await fetchBooks(search, page, pagination.size);
+
+            setBooks(result.books);
+            setPagination(result.pagination);
         } catch (err) {
-            setError(err.message || 'Có lỗi khi tải dữ liệu.');
+            setError(err.message || 'Không thể tải danh sách sách.');
+            setBooks([]);
+
+            setPagination({
+                page: 1,
+                size: 10,
+                total: 0,
+                totalPages: 0,
+            });
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     useEffect(() => {
         loadBooks();
@@ -65,7 +69,7 @@ export default function BookLookup() {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        loadBooks(keyword);
+        loadBooks(keyword, 1);
     };
 
     const getAvailability = (book) => {
@@ -123,7 +127,7 @@ export default function BookLookup() {
             <div className="table-card">
                 <div className="table-header">
                     <h2>Danh sách sách</h2>
-                    <span>{books.length} kết quả</span>
+                    <span>{pagination.total} kết quả</span>
                 </div>
 
                 <div className="table-responsive">
@@ -228,6 +232,14 @@ export default function BookLookup() {
                     </table>
                 </div>
             </div>
+            <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                size={pagination.size}
+                loading={loading}
+                onPageChange={(nextPage) => loadBooks(keyword, nextPage)}
+            />
         </div>
     );
 }

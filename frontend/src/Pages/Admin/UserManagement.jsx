@@ -1,57 +1,17 @@
-
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import userService from '../../Services/userService';
+import Pagination from '../../Component/common/Pagination';
+import './UserManagement.css';
 
-const styles = {
-    page: { padding: 24, color: '#1f2937' },
-    subtitle: { color: '#6b7280' },
-    toolbar: {
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 12,
-        margin: '20px 0',
-    },
-    input: {
-        padding: '10px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: 8,
-        minWidth: 200,
-    },
-    select: {
-        padding: '10px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: 8,
-        background: '#fff',
-    },
-    button: {
-        padding: '9px 13px',
-        border: '1px solid #d1d5db',
-        borderRadius: 8,
-        background: '#fff',
-        cursor: 'pointer',
-    },
-    primaryButton: {
-        padding: '9px 13px',
-        border: 'none',
-        borderRadius: 8,
-        background: '#1d4ed8',
-        color: '#fff',
-        cursor: 'pointer',
-    },
-    panel: {
-        padding: 20,
-        background: '#fff',
-        border: '1px solid #e5e7eb',
-        borderRadius: 12,
-    },
-    tableWrap: { overflowX: 'auto' },
-    table: { width: '100%', borderCollapse: 'collapse', minWidth: 780 },
-    cell: { padding: 12, textAlign: 'left', borderBottom: '1px solid #e5e7eb' },
-    error: { color: '#b91c1c' },
+const PAGE_SIZE = 10;
+
+const getList = (data) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.content)) return data.content;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.users)) return data.users;
+    return [];
 };
-
-const getList = (data) =>
-    Array.isArray(data) ? data : data?.content || data?.items || [];
 
 function normalizeRole(role) {
     if (typeof role === 'string') {
@@ -59,7 +19,9 @@ function normalizeRole(role) {
     }
 
     if (role && typeof role === 'object') {
-        return normalizeRole(role.name || role.roleName || role.authority || '');
+        return normalizeRole(
+            role.name || role.roleName || role.authority || ''
+        );
     }
 
     return '';
@@ -77,9 +39,12 @@ function UserManagement() {
     const [users, setUsers] = useState([]);
     const [keyword, setKeyword] = useState('');
     const [roleFilter, setRoleFilter] = useState('ALL');
+    const [page, setPage] = useState(1);
+
     const [loading, setLoading] = useState(true);
     const [savingId, setSavingId] = useState(null);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
@@ -87,18 +52,10 @@ function UserManagement() {
 
         try {
             const data = await userService.getUsers();
-
-            setUsers(
-                Array.isArray(data)
-                    ? data
-                    : data?.content ?? data?.items ?? []
-            );
+            setUsers(getList(data));
         } catch (err) {
             console.error('Lỗi tải danh sách người dùng:', err);
-
-            setError(
-                err.message || 'Không thể tải danh sách người dùng.'
-            );
+            setError(err.message || 'Không thể tải danh sách người dùng.');
         } finally {
             setLoading(false);
         }
@@ -108,19 +65,54 @@ function UserManagement() {
         loadUsers();
     }, [loadUsers]);
 
-    const filteredUsers = users.filter((user) => {
-        const searchText = [
-            user.fullName,
-            user.username,
-            user.email,
-        ].join(' ').toLowerCase();
+    // Lọc dữ liệu theo từ khóa và vai trò
+    const filteredUsers = useMemo(() => {
+        const search = keyword.trim().toLowerCase();
 
-        const matchesKeyword = searchText.includes(keyword.trim().toLowerCase());
-        const roles = getRoles(user);
-        const matchesRole = roleFilter === 'ALL' || roles.includes(roleFilter);
+        return users.filter((user) => {
+            const searchText = [
+                user.fullName,
+                user.name,
+                user.username,
+                user.email,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
 
-        return matchesKeyword && matchesRole;
-    });
+            const matchesKeyword = searchText.includes(search);
+            const roles = getRoles(user);
+            const matchesRole =
+                roleFilter === 'ALL' || roles.includes(roleFilter);
+
+            return matchesKeyword && matchesRole;
+        });
+    }, [users, keyword, roleFilter]);
+
+    // Tính toán phân trang
+    const totalPages = Math.max(
+        1,
+        Math.ceil(filteredUsers.length / PAGE_SIZE)
+    );
+
+    const currentPage = Math.min(page, totalPages);
+
+    const paginatedUsers = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+
+        return filteredUsers.slice(start, start + PAGE_SIZE);
+    }, [filteredUsers, currentPage]);
+
+    // Quay về trang đầu khi thay đổi bộ lọc
+    useEffect(() => {
+        setPage(1);
+    }, [keyword, roleFilter]);
+
+    const handleRefresh = async () => {
+        setPage(1);
+        setSuccess('');
+        await loadUsers();
+    };
 
     const updateRole = async (user, newRole) => {
         const id = user.id ?? user.userId;
@@ -131,21 +123,30 @@ function UserManagement() {
         }
 
         const currentRoles = getRoles(user);
-        if (currentRoles.length === 1 && currentRoles[0] === newRole) return;
 
-        if (!window.confirm(
-            `Bạn có chắc muốn đổi vai trò của ${user.fullName || user.username} thành ${newRole}?`
-        )) {
+        if (currentRoles.length === 1 && currentRoles[0] === newRole) {
+            return;
+        }
+
+        const displayName =
+            user.fullName || user.name || user.username || `#${id}`;
+
+        if (
+            !window.confirm(
+                `Bạn có chắc muốn đổi vai trò của ${displayName} thành ${newRole}?`
+            )
+        ) {
             return;
         }
 
         setSavingId(id);
         setError('');
+        setSuccess('');
 
         try {
             await userService.updateUserRole(id, newRole);
-
             await loadUsers();
+            setSuccess(`Đã cập nhật vai trò cho ${displayName}.`);
         } catch (err) {
             setError(err.message || 'Không thể cập nhật vai trò.');
         } finally {
@@ -154,102 +155,307 @@ function UserManagement() {
     };
 
     return (
-        <div style={styles.page}>
-            <h1>Quản lý người dùng</h1>
-            <p style={styles.subtitle}>
-                Tra cứu tài khoản và quản lý vai trò truy cập hệ thống.
-            </p>
+        <main className="user-management">
+            <header className="um-header">
+                <div className="um-heading">
+                    <span className="um-eyebrow">QUẢN TRỊ HỆ THỐNG</span>
 
-            {error && <p role="alert" style={styles.error}>{error}</p>}
+                    <h1>Quản lý người dùng</h1>
 
-            <div style={styles.toolbar}>
-                <input
-                    style={styles.input}
-                    value={keyword}
-                    onChange={(event) => setKeyword(event.target.value)}
-                    placeholder="Tìm tên, username, email..."
-                    aria-label="Tìm kiếm người dùng"
-                />
+                    <p>
+                        Quản lý tài khoản, tra cứu thông tin và phân quyền
+                        truy cập hệ thống BK Library.
+                    </p>
+                </div>
 
-                <select
-                    style={styles.select}
-                    value={roleFilter}
-                    onChange={(event) => setRoleFilter(event.target.value)}
-                    aria-label="Lọc theo vai trò"
+                <button
+                    type="button"
+                    className="um-button um-button-primary"
+                    onClick={handleRefresh}
+                    disabled={loading}
                 >
-                    <option value="ALL">Tất cả vai trò</option>
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="USER">USER</option>
-                    <option value="LIBRARIAN">LIBRARIAN</option>
-                </select>
-
-                <button style={styles.button} onClick={loadUsers}>
-                    Làm mới
+                    <span className={loading ? 'um-spin' : ''}>↻</span>
+                    {loading ? 'Đang tải...' : 'Làm mới dữ liệu'}
                 </button>
-            </div>
+            </header>
 
-            <section style={styles.panel}>
-                <h2>Danh sách người dùng ({filteredUsers.length})</h2>
+            <section className="um-stats">
+                <article className="um-stat-card">
+                    <div className="um-stat-icon um-icon-blue">♙</div>
+                    <div className="um-stat-content">
+                        <span>Tổng tài khoản</span>
+                        <strong>{users.length.toLocaleString('vi-VN')}</strong>
+                        <small>Tất cả người dùng</small>
+                    </div>
+                </article>
 
-                {loading ? (
-                    <p>Đang tải danh sách...</p>
-                ) : filteredUsers.length === 0 ? (
-                    <p>Không tìm thấy người dùng phù hợp.</p>
-                ) : (
-                    <div style={styles.tableWrap}>
-                        <table style={styles.table}>
-                            <thead>
+                <article className="um-stat-card">
+                    <div className="um-stat-icon um-icon-purple">⌕</div>
+                    <div className="um-stat-content">
+                        <span>Kết quả hiện tại</span>
+                        <strong>
+                            {filteredUsers.length.toLocaleString('vi-VN')}
+                        </strong>
+                        <small>Theo điều kiện lọc</small>
+                    </div>
+                </article>
+
+                <article className="um-stat-card">
+                    <div className="um-stat-icon um-icon-green">▤</div>
+                    <div className="um-stat-content">
+                        <span>Số trang</span>
+                        <strong>{currentPage}/{totalPages}</strong>
+                        <small>{PAGE_SIZE} tài khoản mỗi trang</small>
+                    </div>
+                </article>
+            </section>
+
+            {error && (
+                <div className="um-alert um-alert-error" role="alert">
+                    <span>{error}</span>
+                    <button
+                        type="button"
+                        onClick={() => setError('')}
+                        aria-label="Đóng thông báo lỗi"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            {success && (
+                <div className="um-alert um-alert-success" role="status">
+                    <span>{success}</span>
+                    <button
+                        type="button"
+                        onClick={() => setSuccess('')}
+                        aria-label="Đóng thông báo thành công"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            <section className="um-panel">
+                <div className="um-panel-heading">
+                    <div>
+                        <h2>Danh sách tài khoản</h2>
+                        <p>
+                            Tìm kiếm và thay đổi vai trò của người dùng.
+                        </p>
+                    </div>
+
+                    <span className="um-total-badge">
+                        {filteredUsers.length.toLocaleString('vi-VN')} tài khoản
+                    </span>
+                </div>
+
+                <div className="um-toolbar">
+                    <label className="um-search">
+                        <span aria-hidden="true">⌕</span>
+                        <input
+                            type="search"
+                            value={keyword}
+                            onChange={(event) => setKeyword(event.target.value)}
+                            placeholder="Tìm theo họ tên, username, email..."
+                            aria-label="Tìm kiếm người dùng"
+                        />
+
+                        {keyword && (
+                            <button
+                                type="button"
+                                onClick={() => setKeyword('')}
+                                aria-label="Xóa từ khóa"
+                            >
+                                ×
+                            </button>
+                        )}
+                    </label>
+
+                    <label className="um-role-filter">
+                        <span>Vai trò</span>
+                        <select
+                            value={roleFilter}
+                            onChange={(event) =>
+                                setRoleFilter(event.target.value)
+                            }
+                            aria-label="Lọc theo vai trò"
+                        >
+                            <option value="ALL">Tất cả vai trò</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="USER">USER</option>
+                            <option value="LIBRARIAN">LIBRARIAN</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div className="um-table-wrap">
+                    <table className="um-table">
+                        <thead>
+                            <tr>
+                                <th>NGƯỜI DÙNG</th>
+                                <th>USERNAME</th>
+                                <th>EMAIL</th>
+                                <th>VAI TRÒ HIỆN TẠI</th>
+                                <th className="um-action-heading">PHÂN QUYỀN</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {loading ? (
                                 <tr>
-                                    {['Họ tên', 'Username', 'Email', 'Vai trò', 'Cập nhật vai trò'].map((label) => (
-                                        <th key={label} style={styles.cell}>{label}</th>
-                                    ))}
+                                    <td colSpan="5">
+                                        <div className="um-state">
+                                            <span className="um-loader" />
+                                            <span>Đang tải danh sách người dùng...</span>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((user, index) => {
+                            ) : paginatedUsers.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5">
+                                        <div className="um-state um-empty">
+                                            <span className="um-empty-icon">⌕</span>
+                                            <strong>Không tìm thấy người dùng</strong>
+                                            <span>
+                                                Hãy thử từ khóa hoặc điều kiện lọc khác.
+                                            </span>
+                                            {(keyword || roleFilter !== 'ALL') && (
+                                                <button
+                                                    type="button"
+                                                    className="um-button"
+                                                    onClick={() => {
+                                                        setKeyword('');
+                                                        setRoleFilter('ALL');
+                                                        setPage(1);
+                                                    }}
+                                                >
+                                                    Xóa bộ lọc
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedUsers.map((user, index) => {
                                     const id = user.id ?? user.userId;
                                     const roles = getRoles(user);
                                     const selectedRole = roles[0] || 'USER';
+                                    const displayName =
+                                        user.fullName || user.name || 'Chưa cập nhật';
+                                    const isSaving = savingId === id;
 
                                     return (
                                         <tr key={id ?? index}>
-                                            <td style={styles.cell}>
-                                                {user.fullName || user.name || '—'}
+                                            <td>
+                                                <div className="um-user-cell">
+                                                    <span className="um-avatar">
+                                                        {displayName
+                                                            .charAt(0)
+                                                            .toUpperCase()}
+                                                    </span>
+
+                                                    <div className="um-user-info">
+                                                        <strong>{displayName}</strong>
+                                                        <span>
+                                                            ID: {id ?? '—'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td style={styles.cell}>
-                                                {user.username || '—'}
+
+                                            <td>
+                                                <span className="um-username">
+                                                    {user.username || '—'}
+                                                </span>
                                             </td>
-                                            <td style={styles.cell}>
-                                                {user.email || '—'}
+
+                                            <td>
+                                                <span className="um-email">
+                                                    {user.email || '—'}
+                                                </span>
                                             </td>
-                                            <td style={styles.cell}>
-                                                {roles.length ? roles.join(', ') : 'Chưa gán'}
+
+                                            <td>
+                                                {roles.length ? (
+                                                    <div className="um-role-badges">
+                                                        {roles.map((role) => (
+                                                            <span
+                                                                key={role}
+                                                                className={`um-role-badge um-role-${role.toLowerCase()}`}
+                                                            >
+                                                                {role}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="um-unassigned">
+                                                        Chưa gán vai trò
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td style={styles.cell}>
-                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+
+                                            <td>
+                                                <div className="um-permission-cell">
                                                     <select
-                                                        style={styles.select}
+                                                        className="um-role-select"
                                                         value={selectedRole}
-                                                        disabled={savingId === id}
-                                                        onChange={(event) => updateRole(user, event.target.value)}
+                                                        disabled={isSaving || loading}
+                                                        onChange={(event) =>
+                                                            updateRole(
+                                                                user,
+                                                                event.target.value
+                                                            )
+                                                        }
                                                         aria-label={`Đổi vai trò cho ${user.username || id}`}
                                                     >
                                                         <option value="USER">USER</option>
                                                         <option value="ADMIN">ADMIN</option>
-                                                        <option value="LIBRARIAN">LIBRARIAN</option>
+                                                        <option value="LIBRARIAN">
+                                                            LIBRARIAN
+                                                        </option>
                                                     </select>
-                                                    {savingId === id && <span>Đang lưu...</span>}
+
+                                                    {isSaving && (
+                                                        <span className="um-saving">
+                                                            Đang lưu...
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
                                     );
-                                })}
-                            </tbody>
-                        </table>
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {!loading && !error && filteredUsers.length > 0 && (
+                    <div className="um-pagination">
+                        <span className="um-pagination-info">
+                            Hiển thị{' '}
+                            {(currentPage - 1) * PAGE_SIZE + 1}
+                            {'–'}
+                            {Math.min(
+                                currentPage * PAGE_SIZE,
+                                filteredUsers.length
+                            )}{' '}
+                            trong {filteredUsers.length} tài khoản
+                        </span>
+
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            total={filteredUsers.length}
+                            size={PAGE_SIZE}
+                            loading={loading}
+                            onPageChange={setPage}
+                        />
                     </div>
                 )}
             </section>
-        </div>
+        </main>
     );
 }
 

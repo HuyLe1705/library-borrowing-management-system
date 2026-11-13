@@ -1,6 +1,9 @@
 export const ROLES = Object.freeze({
     ADMIN: 'ADMIN',
     USER: 'USER',
+    LIBRARIAN: 'LIBRARIAN',
+    STUDENT: 'STUDENT',
+    LECTURER: 'LECTURER',
 });
 
 export const PERMISSIONS = Object.freeze({
@@ -12,6 +15,9 @@ export const PERMISSIONS = Object.freeze({
 });
 
 const ROLE_PERMISSIONS = {
+    [ROLES.LIBRARIAN]: [PERMISSIONS.BOOK_VIEW, PERMISSIONS.BOOK_MANAGE, PERMISSIONS.BORROW_MANAGE],
+    [ROLES.STUDENT]: [PERMISSIONS.BOOK_VIEW, PERMISSIONS.BOOK_BORROW],
+    [ROLES.LECTURER]: [PERMISSIONS.BOOK_VIEW, PERMISSIONS.BOOK_BORROW],
     [ROLES.ADMIN]: [
         PERMISSIONS.BOOK_VIEW,
         PERMISSIONS.BOOK_BORROW,
@@ -114,7 +120,8 @@ export const getDefaultRoute = (user) => {
         return '/admin';
     }
 
-    if (hasRole(user, [ROLES.USER])) {
+    if (hasRole(user, [ROLES.LIBRARIAN])) return '/librarian';
+    if (hasRole(user, [ROLES.USER, ROLES.STUDENT, ROLES.LECTURER])) {
         return '/';
     }
 

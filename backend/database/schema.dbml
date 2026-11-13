@@ -115,3 +115,18 @@ Ref: borrow_requests.book_id > books.id
 Ref: borrow_requests.copy_id > book_copies.id [delete: set null]
 Ref: activity_logs.user_id > users.id [delete: set null]
 
+Table renewal_requests {
+  id int [pk, increment]
+  borrow_record_id int [not null]
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
+  note nvarchar(500)
+  admin_note nvarchar(500)
+  reviewed_by int
+  original_due_date date [not null]
+  new_due_date date
+  created_at timestamp [default: `now()`]
+  reviewed_at timestamp
+}
+Ref: renewal_requests.borrow_record_id > borrow_records.id
+Ref: renewal_requests.reviewed_by > users.id
+

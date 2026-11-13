@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { getUsers } from '../../Services/userService';
+import Pagination from '../../Component/common/Pagination';
 import './LibrarianPages.css';
 
 const API_URL = 'http://localhost:5000/api';
@@ -7,35 +9,40 @@ function getToken() {
     return localStorage.getItem('token');
 }
 
-async function fetchReaders(search = '') {
-    const params = new URLSearchParams();
+async function fetchReaders(keyword = '', page = 1, size = 10) {
+    const roles = ['STUDENT', 'LECTURER'];
 
-    if (search.trim()) {
-        params.set('search', search.trim());
-    }
-
-    const response = await fetch(
-        `${API_URL}/users?${params.toString()}`,
-        {
-            headers: {
-                Authorization: `Bearer ${getToken()}`,
-            },
-        }
+    const results = await Promise.all(
+        roles.map((role) =>
+            getUsers({
+                page,
+                size,
+                keyword: keyword.trim() || undefined,
+                role,
+                sort: 'fullName',
+                order: 'ASC',
+            })
+        )
     );
 
-    if (!response.ok) {
-        throw new Error('Không thể tải danh sách độc giả.');
-    }
+    const readerLists = results.map((data) => {
+        if (Array.isArray(data?.items)) return data.items;
+        if (Array.isArray(data?.users)) return data.users;
+        if (Array.isArray(data)) return data;
+        return [];
+    });
 
-    const result = await response.json();
-    const data = result.data ?? result;
+    const allReaders = readerLists.flat();
 
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.users)) return data.users;
-    if (Array.isArray(data.readers)) return data.readers;
-    if (Array.isArray(data.items)) return data.items;
-
-    return [];
+    return {
+        readers: allReaders,
+        pagination: {
+            page,
+            size,
+            total: allReaders.length,
+            totalPages: Math.ceil(allReaders.length / size),
+        },
+    };
 }
 
 export default function ReaderLookup() {
@@ -43,16 +50,31 @@ export default function ReaderLookup() {
     const [readers, setReaders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [pagination, setPagination] = useState({
+        page: 1,
+        size: 10,
+        total: 0,
+        totalPages: 0,
+    });
 
-    const loadReaders = async (search = '') => {
+    const loadReaders = async (search = keyword, page = 1) => {
         try {
             setLoading(true);
             setError('');
 
-            const data = await fetchReaders(search);
-            setReaders(data);
+            const result = await fetchReaders(search, page, pagination.size);
+
+            setReaders(result.readers);
+            setPagination(result.pagination);
         } catch (err) {
             setError(err.message || 'Có lỗi khi tải dữ liệu.');
+            setReaders([]);
+            setPagination({
+                page: 1,
+                size: 10,
+                total: 0,
+                totalPages: 0,
+            });
         } finally {
             setLoading(false);
         }
@@ -86,6 +108,25 @@ export default function ReaderLookup() {
             label: reader.status ?? 'Chưa xác định',
             className: 'status-neutral',
         };
+    };
+
+    const getRoleLabel = (reader) => {
+        const role = String(
+            reader.role ?? reader.roles?.[0]?.name ?? ''
+        ).toUpperCase();
+
+        const roleLabels = {
+            STUDENT: 'Sinh viên',
+            LECTURER: 'Giảng viên',
+            LIBRARIAN: 'Thủ thư',
+            ADMIN: 'Quản trị viên',
+        };
+
+        return roleLabels[role] ?? role ?? '—';
+    };
+
+    const handlePageChange = (nextPage) => {
+        loadReaders(keyword, nextPage);
     };
 
     return (
@@ -191,11 +232,7 @@ export default function ReaderLookup() {
 
                                             <td>{reader.phone ?? '—'}</td>
 
-                                            <td>
-                                                {reader.role ??
-                                                    reader.roles?.[0]?.name ??
-                                                    '—'}
-                                            </td>
+                                            <td>{getRoleLabel(reader)}</td>
 
                                             <td>
                                                 <span
@@ -210,6 +247,15 @@ export default function ReaderLookup() {
                             )}
                         </tbody>
                     </table>
+
+                    <Pagination
+                        page={pagination.page}
+                        totalPages={pagination.totalPages}
+                        total={pagination.total}
+                        size={pagination.size}
+                        loading={loading}
+                        onPageChange={handlePageChange}
+                    />
                 </div>
             </div>
         </div>

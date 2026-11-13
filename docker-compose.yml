@@ -20,7 +20,7 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # 2. Tự động khởi tạo Database LBMS_DB và nạp schema.sql
+  # 2. Tự động khởi tạo Database: Chạy ./db trước, sau đó chạy ./backend/database như migration
   db-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: lbms-db-init
@@ -28,14 +28,52 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend/database:/database:ro
+      - ./db:/init-db:ro
+      - ./backend/database:/backend-database:ro
     entrypoint: >
       /bin/bash -c "
-      echo 'Dang khoi tao Database LBMS_DB...';
-      /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -C -Q \"IF DB_ID('LBMS_DB') IS NULL CREATE DATABASE LBMS_DB;\";
-      echo 'Dang chay file database/schema.sql (UTF-8)...';
-      /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -d LBMS_DB -C -f 65001 -i /database/schema.sql;
-      echo 'Khoi tao Database thanh cong!';
+      echo '==================================================';
+      echo '[1/2] KHOI TAO CSDL GOC TU THU MUC ./db';
+      echo '==================================================';
+      EXISTS=\$$(/opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -C -h -1 -W -Q \"SET NOCOUNT ON; IF DB_ID('LibraryDB') IS NOT NULL AND OBJECT_ID('LibraryDB.dbo.Branch', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0;\" 2>/dev/null || echo 0);
+      if [ \"\$$EXISTS\" = \"1\" ]; then
+        echo 'Database LibraryDB va cac bang goc tu ./db da ton tai. Bo qua buoc nay de tranh trung lap.';
+      else
+        echo 'Dang thuc thi cac script trong ./db...';
+        for sql_file in /init-db/*.sql; do
+          if [ -f \"\$$sql_file\" ]; then
+            echo \"  -> Dang chay: \$$sql_file (UTF-8)...\";
+            /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -C -f 65001 -i \"\$$sql_file\";
+          fi
+        done;
+        echo 'Khoi tao ./db hoan tat!';
+      fi;
+
+      echo '==================================================';
+      echo '[2/2] CHAY DATABASE BACKEND & MIGRATIONS';
+      echo '==================================================';
+      /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -C -Q \"IF DB_ID('LibraryDB') IS NULL CREATE DATABASE LibraryDB; IF DB_ID('LBMS_DB') IS NULL CREATE DATABASE LBMS_DB;\";
+
+      if [ -f /backend-database/schema.sql ]; then
+        echo '  -> Dang chay /backend-database/schema.sql vao LibraryDB (UTF-8)...';
+        /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -d LibraryDB -C -f 65001 -i /backend-database/schema.sql;
+        echo '  -> Dong bo schema.sql vao LBMS_DB...';
+        /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -d LBMS_DB -C -f 65001 -i /backend-database/schema.sql;
+      fi;
+
+      if [ -d /backend-database/migrations ]; then
+        for mig in /backend-database/migrations/*.sql; do
+          if [ -f \"\$$mig\" ]; then
+            echo \"  -> Dang chay migration: \$$mig vao LibraryDB...\";
+            /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -d LibraryDB -C -f 65001 -i \"\$$mig\";
+            /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P 'YourStrong@Password123' -d LBMS_DB -C -f 65001 -i \"\$$mig\";
+          fi
+        done;
+      fi;
+
+      echo '==================================================';
+      echo 'KHOI TAO VA MIGRATION HOAN TAT XUAT SAC!';
+      echo '==================================================';
       "
 
   # 3. Node.js Backend API (Express.js)
@@ -54,7 +92,7 @@ services:
       DB_PASSWORD: "YourStrong@Password123"
       DB_SERVER: db
       DB_PORT: 1433
-      DB_NAME: LBMS_DB
+      DB_NAME: LibraryDB
       DB_ENCRYPT: "false"
       DB_TRUST_SERVER_CERTIFICATE: "true"
     depends_on:
@@ -79,4 +117,3 @@ services:
 
 volumes:
   sqlserver_data:
-

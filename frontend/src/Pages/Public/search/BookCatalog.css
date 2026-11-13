@@ -98,29 +98,6 @@
   z-index: 2;
 }
 
-.book-catalog__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 23px;
-  padding: 8px 13px;
-  border: 1px solid #dfe7ff;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.8);
-  color: #455b94;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-}
-
-.book-catalog__eyebrow > span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4c70e8;
-  box-shadow: 0 0 0 4px #e9efff;
-}
-
 .book-catalog__hero-content h1 {
   margin: 0;
   color: var(--bc-ink);
@@ -1129,10 +1106,6 @@
 @media (max-width: 480px) {
   .book-catalog__container {
     width: calc(100% - 28px);
-  }
-
-  .book-catalog__eyebrow {
-    font-size: 9px;
   }
 
   .book-catalog__hero-content h1 {

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './footer.css';
@@ -8,16 +7,24 @@ const Footer = () => {
 
     return (
         <footer className="site-footer">
+            {/* Đường nhấn màu thương hiệu */}
+
             <div className="footer-container">
                 <div className="footer-main">
-                    {/* Brand */}
+                    {/* Thương hiệu */}
                     <div className="footer-brand">
                         <Link
                             to="/"
                             className="footer-logo"
                             aria-label="BK Library - Trang chủ"
                         >
-                            <img src="/Image/logolib.png" alt="" />
+                            <span className="footer-logo-icon">
+                                <img
+                                    src="/Image/logolib.png"
+                                    alt=""
+                                />
+                            </span>
+
                             <span>BK Library</span>
                         </Link>
 
@@ -25,39 +32,72 @@ const Footer = () => {
                             Kho tri thức vô tận, đồng hành cùng hành trình
                             học tập và phát triển của bạn.
                         </p>
+
+                        <div className="footer-brand-badge">
+                            <span className="footer-status-dot" />
+                            Không gian tri thức dành cho mọi người
+                        </div>
                     </div>
 
-                    {/* Quick links */}
+                    {/* Khám phá */}
                     <div className="footer-column">
                         <h3>Khám phá</h3>
-                        <Link to="/">Trang chủ</Link>
-                        <Link to="/search">Tra cứu sách</Link>
-                        <Link to="/search">Danh mục sách</Link>
+
+                        <Link to="/">
+                            <span>Trang chủ</span>
+                        </Link>
+
+                        <Link to="/search">
+                            <span>Tra cứu sách</span>
+                        </Link>
+
+                        <Link to="/categories">
+                            <span>Danh mục sách</span>
+                        </Link>
+
+                        <Link to="/about">
+                            <span>Giới thiệu thư viện</span>
+                        </Link>
                     </div>
 
-                    {/* Borrowing */}
+                    {/* Dịch vụ thư viện */}
                     <div className="footer-column">
                         <h3>Dịch vụ thư viện</h3>
-                        <Link to="/cart">Đăng ký mượn</Link>
-                        <Link to="/my-borrowings">Theo dõi mượn trả</Link>
-                        <Link to="/return">Quầy trả sách</Link>
+
+                        <Link to="/search">
+                            <span>Đăng ký mượn sách</span>
+                        </Link>
+
+                        <Link to="/my-books">
+                            <span>Theo dõi mượn trả</span>
+                        </Link>
+
+                        <Link to="/about">
+                            <span>Quy định mượn trả</span>
+                        </Link>
                     </div>
 
-                    {/* Support */}
+                    {/* Hỗ trợ */}
                     <div className="footer-column">
                         <h3>Hỗ trợ</h3>
+
                         <a href="mailto:library@example.com">
-                            Liên hệ thư viện
+                            <span>Liên hệ thư viện</span>
                         </a>
-                        <a href="mailto:library@example.com?subject=Ho%20tro%20BK%20Library">
-                            Gửi yêu cầu hỗ trợ
+
+                        <a
+                            href="mailto:library@example.com?subject=Ho%20tro%20BK%20Library"
+                        >
+                            <span>Gửi yêu cầu hỗ trợ</span>
                         </a>
                     </div>
                 </div>
 
+                {/* Thanh cuối Footer */}
                 <div className="footer-bottom">
-                    <p>
-                        © {currentYear} BK Library. All rights reserved.
+                    <p className="footer-copyright">
+                        © {currentYear} BK Library.
+                        <span> All rights reserved.</span>
                     </p>
 
                     <p className="footer-slogan">

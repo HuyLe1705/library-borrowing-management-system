@@ -189,18 +189,16 @@ const router = express.Router();
  *         description: Không tìm thấy yêu cầu.
  */
 
+for (const [action, status] of Object.entries({ approve: 'APPROVED', reject: 'REJECTED', fulfill: 'FULFILLED' })) {
+    router.patch(`/:id/${action}`, authenticate, authorize('LIBRARIAN', 'ADMIN'), (req, res, next) => {
+        req.body = { ...(req.body || {}), status };
+        return borrowRequestController.updateStatus(req, res, next);
+    });
+}
 router.post('/', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowRequestController.createRequest);
 router.get('/', authenticate, borrowRequestController.getRequests);
 router.get('/:id', authenticate, borrowRequestController.getRequestById);
 router.patch('/:id/cancel', authenticate, borrowRequestController.cancelRequest);
 router.patch('/:id/status', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.updateStatus);
-
-// API duyệt yêu cầu mượn sách (hỗ trợ cả PATCH và POST)
-router.patch('/:id/approve', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.approveRequest);
-router.post('/:id/approve', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.approveRequest);
-
-// API từ chối yêu cầu mượn sách (hỗ trợ cả PATCH và POST)
-router.patch('/:id/reject', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.rejectRequest);
-router.post('/:id/reject', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowRequestController.rejectRequest);
 
 module.exports = router;

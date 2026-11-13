@@ -2,7 +2,6 @@
 /* ================= Homepage ================= */
 .homepage {
     min-height: 100vh;
-    padding: 18px 0 0;
 
     background:
         radial-gradient(ellipse at 10% 10%, #ffffff 0%, transparent 48%),

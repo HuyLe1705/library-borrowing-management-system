@@ -19,6 +19,9 @@ const navigationItems = [
         path: '/admin/circulation',
         icon: '⇄',
     },
+    { label: 'Yêu cầu mượn', path: '/admin/requests', icon: '◷' },
+    { label: 'Yêu cầu gia hạn', path: '/admin/renewals', icon: '↻' },
+    { label: 'Quản lý xử phạt', path: '/admin/fines', icon: '₫' },
     {
         label: 'Quản lý người dùng',
         path: '/admin/users',
