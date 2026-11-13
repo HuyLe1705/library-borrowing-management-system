@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiRequest, unwrapData } from '../../Services/apiClient';
+import Pagination from '../../Component/common/Pagination';
 import './AdminPages.css';
 
 const getList = (data) => {
@@ -51,6 +52,8 @@ function CirculationManagement() {
     const [keyword, setKeyword] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [busyId, setBusyId] = useState(null);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -147,6 +150,22 @@ function CirculationManagement() {
 
     const activeCount = borrowings.filter((item) => !isReturned(item)).length;
     const returnedCount = borrowings.filter(isReturned).length;
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(filteredBorrowings.length / pageSize)
+    );
+
+    const currentPage = Math.min(page, totalPages);
+
+    const paginatedBorrowings = filteredBorrowings.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    );
+
+    useEffect(() => {
+        setPage(1);
+    }, [keyword, statusFilter, tab]);
 
     return (
         <div className="admin-page">
@@ -261,7 +280,7 @@ function CirculationManagement() {
                             </thead>
 
                             <tbody>
-                                {filteredBorrowings.map((item, index) => {
+                                {paginatedBorrowings.map((item, index) => {
                                     const id = item.id ?? item.borrowingId;
                                     const returned = isReturned(item);
                                     const status = String(item.status || '').toUpperCase();
@@ -333,6 +352,16 @@ function CirculationManagement() {
                     </div>
                 )}
             </section>
+            {!loading && filteredBorrowings.length > 0 && (
+                <Pagination
+                    page={currentPage}
+                    totalPages={totalPages}
+                    total={filteredBorrowings.length}
+                    size={pageSize}
+                    loading={loading}
+                    onPageChange={setPage}
+                />
+            )}
         </div>
     );
 }

@@ -18,9 +18,9 @@ const dashboardRepository = {
 
             -- 2. Tổng số bản sao sách & bản sao đang sẵn sàng (AVAILABLE)
             SELECT
-                COUNT(*) AS totalCopies,
-                SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) AS availableCopies
-            FROM dbo.book_copies;
+                (SELECT COUNT(*) FROM dbo.book_copies) AS totalCopies,
+                (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.status='AVAILABLE'
+                    AND NOT EXISTS(SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id=bc.id AND r.status='APPROVED')) AS availableCopies;
 
             -- 3. Tổng số độc giả (Sinh viên & Giảng viên)
             SELECT COUNT(*) AS totalReaders

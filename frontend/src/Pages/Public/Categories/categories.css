@@ -12,7 +12,6 @@
 
     width: 100%;
     min-width: 0;
-    padding: 28px 0 64px;
     color: var(--cat-ink);
     background: #fff;
     font-family: inherit;
@@ -62,25 +61,6 @@
     position: relative;
     z-index: 2;
     max-width: 560px;
-}
-
-.categories-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    margin-bottom: 22px;
-    color: #3757ad;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.4px;
-}
-
-.categories-eyebrow-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #4268e0;
-    box-shadow: 0 0 0 4px rgb(66 104 224 / 12%);
 }
 
 .categories-hero h1 {
@@ -857,11 +837,6 @@
     .categories-hero {
         padding-right: 19px;
         padding-left: 19px;
-    }
-
-    .categories-eyebrow {
-        font-size: 8px;
-        letter-spacing: 1px;
     }
 
     .categories-hero h1 {

@@ -9,7 +9,7 @@ const server = app.listen(PORT, () => {
     console.log('===================================');
     console.log(`Environment : ${process.env.NODE_ENV || 'development'}`);
     console.log(`Port        : ${PORT}`);
-    console.log(`API         : http://localhost:${PORT}/api`);
+    console.log(`API         : http://localhost:${PORT}/api/api-docs`);
     console.log(`Health      : http://localhost:${PORT}/api/health`);
     console.log('===================================');
 });

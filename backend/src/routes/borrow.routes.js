@@ -248,8 +248,8 @@ const router = express.Router();
  *
  * /api/borrows/{id}/renew:
  *   post:
- *     summary: Gia hạn thời gian mượn sách (+7 ngày)
- *     description: Mỗi phiếu mượn chỉ được gia hạn tối đa 1 lần, chỉ áp dụng cho sách chưa quá hạn và độc giả không nợ phạt.
+ *     summary: Nhân viên gia hạn thời gian mượn sách (+7 ngày)
+ *     description: Chỉ Thủ thư/Admin. Độc giả gửi yêu cầu qua POST /api/renewal-requests. Tối đa 1 lần, chỉ cho sách chưa quá hạn, không nợ phạt và không có người khác chờ đầu sách.
  *     tags: [Borrows]
  *     parameters:
  *       - in: path
@@ -360,7 +360,7 @@ router.post('/request', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIA
 router.get('/', authenticate, borrowController.getBorrows);
 router.post('/checkout', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.borrowBook);
 router.post('/return', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.returnBook);
-router.post('/:id/renew', authenticate, authorize('STUDENT', 'LECTURER', 'LIBRARIAN', 'ADMIN'), borrowController.renewBorrow);
+router.post('/:id/renew', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.renewBorrow);
 router.patch('/fines/:id/pay', authenticate, authorize('LIBRARIAN', 'ADMIN'), borrowController.payFine);
 
 module.exports = router;

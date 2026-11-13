@@ -1,6 +1,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import bookService from '../../Services/bookService';
+import Pagination from '../../Component/common/Pagination';
 import './AdminPages.css';
 
 const emptyBook = {
@@ -25,38 +26,66 @@ function BookManagement() {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(emptyBook);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        size: 10,
+        total: 0,
+        totalPages: 0,
+    });
 
-    const loadBooks = useCallback(async () => {
+    const loadBooks = useCallback(async (search = keyword, page = 1) => {
         setLoading(true);
         setError('');
 
         try {
-            const result = await bookService.getBooks();
-            const list = Array.isArray(result)
-                ? result
-                : result?.items || result?.content || result?.data || []; 
+            const result = await bookService.getBooks({
+                page,
+                size: pagination.size,
+                keyword: search.trim() || undefined,
+            });
+
+            const data = result?.data ?? result;
+
+            const list = Array.isArray(data)
+                ? data
+                : data?.items ?? data?.content ?? data?.books ?? [];
+
             setBooks(list);
+
+            setPagination(
+                data?.pagination ?? {
+                    page,
+                    size: pagination.size,
+                    total: list.length,
+                    totalPages: list.length > 0 ? 1 : 0,
+                }
+            );
         } catch (err) {
             setError(err.message || 'Không thể tải danh sách sách.');
+            setBooks([]);
+            setPagination({
+                page: 1,
+                size: 10,
+                total: 0,
+                totalPages: 0,
+            });
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [keyword, pagination.size]);
 
     useEffect(() => {
         loadBooks();
     }, [loadBooks]);
 
-    const filteredBooks = books.filter((book) => {
-        const normalizedText = [
-            book.title ?? book.Title,
-            book.author ?? book.Author,
-            book.isbn ?? book.ISBN,
-            book.category ?? book.Category,
-        ].join(' ').toLowerCase();
+    const handleSearch = (event) => {
+        setKeyword(event.target.value);
+    };
 
-        return normalizedText.includes(keyword.trim().toLowerCase());
-    });
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        loadBooks(keyword, 1);
+    };
 
     const updateField = (event) => {
         const { name, value } = event.target;
@@ -84,54 +113,54 @@ function BookManagement() {
         setError('');
     };
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        setError('');
+    // const handleSubmit = async (event) => {
+    //     event.preventDefault();
+    //     setError('');
 
-        if (!form.title.trim() || !form.author.trim()) {
-            setError('Vui lòng nhập tên sách và tác giả.');
-            return;
-        }
+    //     if (!form.title.trim() || !form.author.trim()) {
+    //         setError('Vui lòng nhập tên sách và tác giả.');
+    //         return;
+    //     }
 
-        const payload = {
-            ...form,
-            title: form.title.trim(),
-            author: form.author.trim(),
-            publicationYear: form.publicationYear
-                ? Number(form.publicationYear)
-                : null,
-            totalCopies: Number(form.totalCopies),
-            availableCopies: Number(form.availableCopies),
-        };
+    //     const payload = {
+    //         ...form,
+    //         title: form.title.trim(),
+    //         author: form.author.trim(),
+    //         publicationYear: form.publicationYear
+    //             ? Number(form.publicationYear)
+    //             : null,
+    //         totalCopies: Number(form.totalCopies),
+    //         availableCopies: Number(form.availableCopies),
+    //     };
 
-        if (
-            payload.totalCopies < 0 ||
-            payload.availableCopies < 0 ||
-            payload.availableCopies > payload.totalCopies
-        ) {
-            setError('Số lượng sách không hợp lệ.');
-            return;
-        }
+    //     if (
+    //         payload.totalCopies < 0 ||
+    //         payload.availableCopies < 0 ||
+    //         payload.availableCopies > payload.totalCopies
+    //     ) {
+    //         setError('Số lượng sách không hợp lệ.');
+    //         return;
+    //     }
 
-        setSaving(true);
+    //     setSaving(true);
 
-        try {
-            if (editingId !== null) {
-                await bookService.updateBook(editingId, payload);
-            } else {
-                await bookService.createBook(payload);
-            }
+    //     try {
+    //         if (editingId !== null) {
+    //             await bookService.updateBook(editingId, payload);
+    //         } else {
+    //             await bookService.createBook(payload);
+    //         }
 
-            setShowForm(false);
-            setEditingId(null);
-            setForm(emptyBook);
-            await loadBooks();
-        } catch (err) {
-            setError(err.message || 'Không thể lưu thông tin sách.');
-        } finally {
-            setSaving(false);
-        }
-    };
+    //         setShowForm(false);
+    //         setEditingId(null);
+    //         setForm(emptyBook);
+    //         await loadBooks();
+    //     } catch (err) {
+    //         setError(err.message || 'Không thể lưu thông tin sách.');
+    //     } finally {
+    //         setSaving(false);
+    //     }
+    // };
 
     const handleDelete = async (book) => {
         const confirmed = window.confirm(
@@ -159,21 +188,30 @@ function BookManagement() {
 
             {error && <p role="alert" className="admin-error">{error}</p>}
 
-            <div className="admin-toolbar">
+            <form
+                className="admin-toolbar"
+                onSubmit={handleSubmit}
+            >
                 <input
                     className="admin-input"
                     value={keyword}
-                    onChange={(event) => setKeyword(event.target.value)}
+                    onChange={handleSearch}
                     placeholder="Tìm theo tên, tác giả, ISBN..."
                     aria-label="Tìm kiếm sách"
                 />
-                <button className="admin-button" onClick={openCreateForm}>
+
+                <button className="admin-button" type="button" onClick={openCreateForm}>
                     + Thêm sách
                 </button>
-                <button className="admin-secondaryButton" onClick={loadBooks}>
+
+                <button className="admin-secondaryButton" type="button" onClick={() => loadBooks(keyword, 1)}>
                     Làm mới
                 </button>
-            </div>
+
+                <button className="admin-button" type="submit" disabled={loading}>
+                    Tìm kiếm
+                </button>
+            </form>
 
             {showForm && (
                 <section className="admin-panel">
@@ -285,11 +323,11 @@ function BookManagement() {
             )}
 
             <section className="admin-panel">
-                <h2>Danh sách sách ({filteredBooks.length})</h2>
+                <h2>Danh sách sách ({pagination.total})</h2>
 
                 {loading ? (
                     <p>Đang tải danh sách...</p>
-                ) : filteredBooks.length === 0 ? (
+                ) : books.length === 0 ? (
                     <p>Không tìm thấy sách phù hợp.</p>
                 ) : (
                     <div className="admin-tableWrap">
@@ -302,7 +340,7 @@ function BookManagement() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredBooks.map((book, index) => {
+                                {books.map((book, index) => {
                                     const id = book.id ?? book.RecordID ?? book.recordId ?? index;
                                     const coverUrl = book.cover_url ?? book.coverUrl ?? book.CoverURL ?? book.CoverImage;
                                     const title = book.title ?? book.Title ?? '—';
@@ -347,6 +385,14 @@ function BookManagement() {
                     </div>
                 )}
             </section>
+            <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                size={pagination.size}
+                loading={loading}
+                onPageChange={(nextPage) => loadBooks(keyword, nextPage)}
+            />
         </div>
     );
 }

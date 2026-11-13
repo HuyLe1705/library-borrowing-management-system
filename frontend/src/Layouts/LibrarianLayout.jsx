@@ -30,6 +30,8 @@ const navigation = [
     path: "/librarian/requests",
     icon: "◷",
   },
+  { label: "Yêu cầu gia hạn", path: "/librarian/renewals", icon: "↻" },
+  { label: "Quản lý xử phạt", path: "/librarian/fines", icon: "₫" },
   {
     label: "Tra cứu sách",
     path: "/librarian/books",

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './LibrarianPages.css';
+import Pagination from '../../Component/common/Pagination';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -97,6 +98,9 @@ export default function BorrowingList() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(10);
+    const [appliedKeyword, setAppliedKeyword] = useState('');
 
     const loadBorrowings = async (filters = {}) => {
         try {
@@ -121,13 +125,45 @@ export default function BorrowingList() {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        loadBorrowings(keyword);
+        setAppliedKeyword(keyword.trim());
+        setPage(1);
     };
 
     const filteredBorrowings = borrowings.filter((borrowing) => {
-        if (statusFilter === 'ALL') return true;
-
         const status = getBorrowingStatus(borrowing);
+
+        if (appliedKeyword) {
+            const searchText = appliedKeyword.toLowerCase();
+
+            const searchableFields = [
+                borrowing.borrowingCode,
+                borrowing.code,
+                borrowing.id,
+                borrowing.borrowerCode,
+                borrowing.user?.userCode,
+                borrowing.reader?.userCode,
+                borrowing.userCode,
+                borrowing.readerCode,
+                borrowing.borrowerName,
+                borrowing.borrower?.fullName,
+                borrowing.reader?.fullName,
+                borrowing.user?.fullName,
+                borrowing.book?.title,
+                borrowing.bookTitle,
+                borrowing.title,
+                borrowing.barcode,
+                borrowing.bookCopy?.barcode,
+                borrowing.copy?.barcode,
+            ];
+
+            const matchesKeyword = searchableFields.some((value) =>
+                String(value ?? '').toLowerCase().includes(searchText)
+            );
+
+            if (!matchesKeyword) return false;
+        }
+
+        if (statusFilter === 'ALL') return true;
 
         if (statusFilter === 'OVERDUE') {
             return status.label === 'Quá hạn';
@@ -148,6 +184,19 @@ export default function BorrowingList() {
         return true;
     });
 
+    const totalPages = Math.ceil(filteredBorrowings.length / pageSize);
+
+    const currentPage = Math.min(page, Math.max(totalPages, 1));
+
+    const paginatedBorrowings = filteredBorrowings.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    );
+
+    const handlePageChange = (nextPage) => {
+        setPage(nextPage);
+    };
+
     return (
         <div className="librarian-page">
             <div className="page-heading">
@@ -160,7 +209,10 @@ export default function BorrowingList() {
 
                 <button
                     type="button"
-                    onClick={() => loadBorrowings(keyword)}
+                    onClick={() => {
+                        setPage(1);
+                        loadBorrowings();
+                    }}
                     disabled={loading}
                 >
                     Làm mới dữ liệu
@@ -188,7 +240,10 @@ export default function BorrowingList() {
                 <select
                     id="borrowing-status"
                     value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
+                    onChange={(event) => {
+                        setStatusFilter(event.target.value);
+                        setPage(1);
+                    }}
                 >
                     <option value="ALL">Tất cả</option>
                     <option value="PENDING">Chờ xử lý</option>
@@ -235,7 +290,7 @@ export default function BorrowingList() {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredBorrowings.map((item, index) => {
+                                paginatedBorrowings.map((item, index) => {
                                     const status = getBorrowingStatus(item);
 
                                     return (
@@ -323,6 +378,15 @@ export default function BorrowingList() {
                             )}
                         </tbody>
                     </table>
+
+                    <Pagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        total={filteredBorrowings.length}
+                        size={pageSize}
+                        loading={loading}
+                        onPageChange={handlePageChange}
+                    />
                 </div>
             </div>
         </div>

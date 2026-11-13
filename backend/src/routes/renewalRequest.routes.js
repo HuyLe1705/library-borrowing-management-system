@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const controller = require('../controllers/renewalRequest.controller');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
+router.use(authenticate);
+router.get('/', controller.list);
+router.post('/', authorize('STUDENT','LECTURER','LIBRARIAN','ADMIN'), controller.create);
+router.patch('/:id/approve', authorize('LIBRARIAN','ADMIN'), controller.decide('APPROVED'));
+router.patch('/:id/reject', authorize('LIBRARIAN','ADMIN'), controller.decide('REJECTED'));
+router.patch('/:id/cancel', controller.decide('CANCELLED'));
+module.exports = router;

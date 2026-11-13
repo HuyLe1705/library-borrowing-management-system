@@ -11,6 +11,7 @@ const borrowRepository = require('../src/repositories/borrow.repository');
 const userRepository = require('../src/repositories/user.repository');
 const dashboardRepository = require('../src/repositories/dashboard.repository');
 const borrowRequestRepository = require('../src/repositories/borrowRequest.repository');
+const reservationRepository = require('../src/repositories/reservation.repository');
 const activityLogRepository = require('../src/repositories/activityLog.repository');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'lbms_default_jwt_secret_key_2026';
@@ -103,6 +104,15 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 '/api/borrows/return',
                 '/api/borrows/{id}/renew',
                 '/api/borrows/fines/{id}/pay',
+                '/api/borrow-requests/{id}/approve',
+                '/api/borrow-requests/{id}/reject',
+                '/api/borrow-requests/{id}/fulfill',
+                '/api/renewal-requests',
+                '/api/renewal-requests/{id}/approve',
+                '/api/renewal-requests/{id}/reject',
+                '/api/renewal-requests/{id}/cancel',
+                '/api/fines',
+                '/api/fines/{id}/pay',
             ];
 
             for (const path of requiredPaths) {
@@ -443,7 +453,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
         test('POST /api/borrows/:id/renew - Kiểm tra tính hợp lệ của ID phiếu mượn', async () => {
             const res = await fetch(`${baseUrl}/api/borrows/xyz/renew`, {
                 method: 'POST',
-                headers: studentHeaders,
+                headers: librarianHeaders,
             });
             assert.equal(res.status, 400);
             const body = await res.json();
@@ -1010,7 +1020,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
             assert.ok(bodyLecturer.message.includes('Bạn không có quyền thực hiện hành động này'));
         });
 
-        test('Chặn 403 khi độc giả (STUDENT) gia hạn phiếu mượn của độc giả khác', async () => {
+        test('Chặn 403 khi độc giả gọi API gia hạn trực tiếp, phải gửi yêu cầu chờ duyệt', async () => {
             const originalRenew = borrowRepository.renewBorrow;
             borrowRepository.renewBorrow = async (id, currentUser) => {
                 if (currentUser && currentUser.userCode !== 'OTHER_USER') {
@@ -1027,7 +1037,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 });
                 assert.equal(res.status, 403);
                 const body = await res.json();
-                assert.ok(body.message.includes('Bạn chỉ có quyền gia hạn phiếu mượn của chính mình'));
+                assert.ok(body.message.includes('quy\u1ec1n'));
             } finally {
                 borrowRepository.renewBorrow = originalRenew;
             }
@@ -1372,6 +1382,9 @@ describe('BK Library (LBMS) API Test Suite', () => {
     // 11. KIỂM THỬ READER BORROW REQUESTS API (/api/borrow-requests)
     // =========================================================================
     describe('11. Reader Borrow Requests API (/api/borrow-requests)', () => {
+        const originalEligibility = borrowRequestRepository.checkEligibility;
+        before(() => { borrowRequestRepository.checkEligibility = async () => {}; });
+        after(() => { borrowRequestRepository.checkEligibility = originalEligibility; });
         test('POST /api/borrow-requests - Độc giả (STUDENT) tạo yêu cầu mượn sách thành công (201 Created)', async () => {
             const originalFindBook = bookRepository.findById;
             const originalFindActive = borrowRequestRepository.findActiveByUserAndBook;
@@ -1516,7 +1529,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
 
         test('PATCH /api/borrow-requests/:id/cancel - Độc giả tự hủy yêu cầu mượn sách PENDING của mình', async () => {
             const originalFindById = borrowRequestRepository.findById;
-            const originalUpdate = borrowRequestRepository.updateStatus;
+            const originalUpdate = reservationRepository.transition;
 
             borrowRequestRepository.findById = async (id) => ({
                 id,
@@ -1525,7 +1538,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 status: 'PENDING',
                 bookTitle: 'Clean Code',
             });
-            borrowRequestRepository.updateStatus = async (id, { status }) => ({ id, status });
+            reservationRepository.transition = async (id, { status }) => ({ id, status });
 
             try {
                 const res = await fetch(`${baseUrl}/api/borrow-requests/1/cancel`, {
@@ -1537,13 +1550,13 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 assert.equal(body.data.status, 'CANCELLED');
             } finally {
                 borrowRequestRepository.findById = originalFindById;
-                borrowRequestRepository.updateStatus = originalUpdate;
+                reservationRepository.transition = originalUpdate;
             }
         });
 
         test('PATCH /api/borrow-requests/:id/status - Thủ thư duyệt (APPROVED) hoặc từ chối (REJECTED) yêu cầu', async () => {
             const originalFindById = borrowRequestRepository.findById;
-            const originalUpdate = borrowRequestRepository.updateStatus;
+            const originalUpdate = reservationRepository.transition;
 
             borrowRequestRepository.findById = async (id) => ({
                 id,
@@ -1552,7 +1565,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 status: 'PENDING',
                 bookTitle: 'Clean Code',
             });
-            borrowRequestRepository.updateStatus = async (id, { status, adminNote }) => ({ id, status, adminNote });
+            reservationRepository.transition = async (id, { status, adminNote }) => ({ id, status, adminNote });
 
             try {
                 const resApprove = await fetch(`${baseUrl}/api/borrow-requests/1/status`, {
@@ -1573,7 +1586,7 @@ describe('BK Library (LBMS) API Test Suite', () => {
                 assert.equal(resStudentBlocked.status, 403);
             } finally {
                 borrowRequestRepository.findById = originalFindById;
-                borrowRequestRepository.updateStatus = originalUpdate;
+                reservationRepository.transition = originalUpdate;
             }
         });
     });

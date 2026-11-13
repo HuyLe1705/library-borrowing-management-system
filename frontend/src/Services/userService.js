@@ -13,6 +13,14 @@ export async function getUsers(params = {}) {
     return unwrapData(response);
 }
 
+export async function searchReaders(keyword = '', filters = {}) {
+    return getUsers({
+        ...filters,
+        keyword: keyword.trim() || undefined,
+        role: filters.role ?? 'STUDENT,LECTURER',
+    });
+}
+
 /**
  * Lấy thông tin chi tiết người dùng theo ID.
  */

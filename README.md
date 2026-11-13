@@ -32,7 +32,9 @@ Hệ thống Quản lý Mượn/Trả Sách Thư viện (Library Borrowing Manag
 
 - **Database**:
   - **Hệ quản trị**: Microsoft SQL Server 2022
-  - **Dịch vụ khởi tạo**: Tự động tạo cơ sở dữ liệu `LBMS_DB` và nạp schema, trigger, dữ liệu mẫu từ `backend/database/schema.sql` (UTF-8) khi khởi động container.
+  - **Dịch vụ khởi tạo (Pipeline 2 giai đoạn)**:
+    - **Giai đoạn 1**: Khởi tạo schema gốc từ `./db/BK_Library_SQLServer_Revised.sql` (tạo `LibraryDB`, bảng `Branch`, `Author`, `BibliographicRecord`, `[User]`, `Loan`, triggers, views, stored procedures và dữ liệu mẫu).
+    - **Giai đoạn 2**: Chạy migration từ `./backend/database/schema.sql` và các file trong `./backend/database/migrations/*.sql` vào cơ sở dữ liệu.
   - **Cổng ánh xạ ra máy chủ (Host Port)**: `localhost:14330`
 
 ---
@@ -41,8 +43,9 @@ Hệ thống Quản lý Mượn/Trả Sách Thư viện (Library Borrowing Manag
 
 ```text
 .
+├── db/                       # Schema CSDL gốc và dữ liệu mẫu (BK_Library_SQLServer_Revised.sql)
 ├── backend/                  # Mã nguồn Backend API
-│   ├── database/             # File schema và dữ liệu mẫu (schema.sql, schema.dbml)
+│   ├── database/             # File schema và migration (schema.sql, migrations/, schema.dbml)
 │   ├── src/                  # Controllers, Services, Repositories, Routes, Middlewares
 │   ├── uploads/              # Thư mục lưu trữ ảnh bìa sách
 │   ├── .env.example          # Mẫu biến môi trường cho Backend
@@ -77,7 +80,9 @@ docker compose up --build -d
 
 Quá trình này sẽ tự động:
 1. Kéo image **MSSQL Server 2022** và khởi chạy database container.
-2. Kiểm tra sức khỏe (`healthcheck`) của database. Khi database sẵn sàng, dịch vụ `db-init` sẽ tự động tạo cơ sở dữ liệu `LBMS_DB` và nạp toàn bộ cấu trúc bảng, dữ liệu mẫu từ `backend/database/schema.sql`.
+2. Kiểm tra sức khỏe (`healthcheck`) của database. Khi database sẵn sàng, dịch vụ `db-init` sẽ:
+   - **Chạy thư mục `./db` trước**: Tự động thực thi `BK_Library_SQLServer_Revised.sql` nạp các bảng gốc, quan hệ, triggers, views, procedures và seed data vào `LibraryDB`.
+   - **Chạy thư mục `./backend/database` tiếp theo**: Thực thi `schema.sql` và các file trong `migrations/` như migration để đồng bộ hệ thống backend.
 3. Build và khởi động dịch vụ **Backend API** (port `5000`).
 4. Build bundle React và chạy **Frontend Nginx** (port `8080`).
 
@@ -89,7 +94,7 @@ Quá trình này sẽ tự động:
 | **Backend API** | `http://localhost:5000/api` | Điểm truy cập gốc của REST API |
 | **Kiểm tra trạng thái API** | `http://localhost:5000/api/health` | Kiểm tra tình trạng backend |
 | **Kiểm tra kết nối Database** | `http://localhost:5000/api/health/db` | Kiểm tra trạng thái kết nối tới SQL Server |
-| **SQL Server Database** | `localhost:14330` | User: `sa`, Mật khẩu: `YourStrong@Password123`, DB: `LBMS_DB` |
+| **SQL Server Database** | `localhost:14330` | User: `sa`, Mật khẩu: `YourStrong@Password123`, DB: `LibraryDB` |
 
 ---
 

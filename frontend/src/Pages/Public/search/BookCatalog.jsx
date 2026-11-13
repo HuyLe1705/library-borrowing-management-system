@@ -3,9 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import Header from '../../../Component/header/header';
 import Footer from '../../../Component/footer/footer';
 import { getBooks } from '../../../Services/bookService';
+import categoryService from '../../../Services/categoryService';
 import './BookCatalog.css';
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 10;
 
 const getBookId = (book) =>
   book?.id ?? book?.bookId ?? book?.bookID ?? book?.isbn;
@@ -26,6 +27,7 @@ const getBookYear = (book) =>
   book?.publishedYear ??
   book?.publishYear ??
   book?.publication_year ??
+  book?.year ??
   '';
 
 const getAvailableCopies = (book) =>
@@ -45,150 +47,152 @@ const getCover = (book) =>
   book?.thumbnail ??
   '';
 
-const normalizeText = (value) =>
-  String(value ?? '').trim().toLocaleLowerCase('vi');
-
 function BookCatalog() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [books, setBooks] = useState([]);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [keyword, setKeyword] = useState(searchParams.get('q') || '');
-  const [category, setCategory] = useState(
-    searchParams.get('category') || ''
-  );
+  const [apiCategories, setApiCategories] = useState([]);
+
+  const urlQuery = searchParams.get('q') || '';
+  const urlCategory = searchParams.get('category') || '';
+
+  const [keyword, setKeyword] = useState(urlQuery);
+  const [category, setCategory] = useState(urlCategory);
   const [year, setYear] = useState('');
   const [availability, setAvailability] = useState('');
   const [sortBy, setSortBy] = useState('title-asc');
   const [page, setPage] = useState(1);
+
+  // Đồng bộ ô tìm kiếm & thể loại khi query URL thay đổi
+  useEffect(() => {
+    setKeyword(urlQuery);
+    setCategory(urlCategory);
+    setPage(1);
+  }, [urlQuery, urlCategory]);
+
+  // Tải danh sách thể loại từ API
+  useEffect(() => {
+    let isMounted = true;
+    categoryService
+      .getCategories()
+      .then((res) => {
+        if (!isMounted) return;
+        const data = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+            ? res.data
+            : [];
+        const names = data
+          .map((item) =>
+            typeof item === 'object'
+              ? item.name || item.categoryName
+              : item
+          )
+          .filter(Boolean);
+        setApiCategories(names);
+      })
+      .catch((err) => {
+        console.warn('Không thể tải danh sách thể loại từ API:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const loadBooks = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
 
-      const response = await getBooks();
+      const activeKeyword = (searchParams.get('q') || '').trim();
+      const activeCategory = (searchParams.get('category') || category || '').trim();
 
-      // Hỗ trợ một số cấu trúc response API phổ biến.
-      const result = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.data)
-          ? response.data
-          : Array.isArray(response?.content)
-            ? response.content
-            : Array.isArray(response?.items)
-              ? response.items
-              : Array.isArray(response?.books)
-                ? response.books
-                : [];
+      const params = {
+        page,
+        size: PAGE_SIZE,
+      };
 
-      setBooks(result);
+      if (activeKeyword) {
+        params.keyword = activeKeyword;
+      }
+      if (activeCategory) {
+        params.category = activeCategory;
+      }
+      if (year) {
+        params.year = year;
+      }
+      if (availability) {
+        params.availability = availability;
+      }
+      if (sortBy) {
+        params.sort = sortBy;
+      }
+
+      const response = await getBooks(params);
+
+      let items = [];
+      let total = 0;
+      let pages = 1;
+
+      if (Array.isArray(response)) {
+        items = response;
+        total = response.length;
+        pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      } else if (response && Array.isArray(response.items)) {
+        items = response.items;
+        total = Number(response.pagination?.total ?? items.length);
+        pages = Math.max(
+          1,
+          Number(response.pagination?.totalPages ?? Math.ceil(total / PAGE_SIZE))
+        );
+      } else if (response && Array.isArray(response.data)) {
+        items = response.data;
+        total = items.length;
+        pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      }
+
+      setBooks(items);
+      setTotalBooks(total);
+      setTotalPages(pages);
     } catch (err) {
       console.error('Không thể tải danh sách sách:', err);
       setError('Không thể tải danh sách sách. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, searchParams, category, year, availability, sortBy]);
 
   useEffect(() => {
     loadBooks();
   }, [loadBooks]);
 
-  useEffect(() => {
-    setKeyword(searchParams.get('q') || '');
-    setCategory(searchParams.get('category') || '');
-    setPage(1);
-  }, [searchParams]);
-
   const categories = useMemo(() => {
-    return [
-      ...new Set(books.map(getBookCategory).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, 'vi'));
-  }, [books]);
+    const bookCategories = books.map(getBookCategory).filter(Boolean);
+    return [...new Set([...apiCategories, ...bookCategories])].sort((a, b) =>
+      a.localeCompare(b, 'vi')
+    );
+  }, [apiCategories, books]);
 
   const years = useMemo(() => {
-    return [
-      ...new Set(books.map(getBookYear).filter(Boolean).map(String)),
-    ].sort((a, b) => Number(b) - Number(a));
+    const yearsFromBooks = books.map(getBookYear).filter(Boolean).map(String);
+    const standardYears = [
+      '2026', '2025', '2024', '2023', '2022', '2021', '2020',
+      '2019', '2018', '2017', '2016', '2015', '2014',
+      '2013', '2012', '2011', '2010', '2009', '2008', '2006', '1994'
+    ];
+    return [...new Set([...standardYears, ...yearsFromBooks])].sort(
+      (a, b) => Number(b) - Number(a)
+    );
   }, [books]);
 
-  const filteredBooks = useMemo(() => {
-    const query = normalizeText(keyword);
-
-    const result = books.filter((book) => {
-      const searchableText = [
-        getBookTitle(book),
-        getBookAuthor(book),
-        book?.isbn,
-        book?.publisher,
-        book?.description,
-      ]
-        .map(normalizeText)
-        .join(' ');
-
-      const matchesKeyword =
-        !query || searchableText.includes(query);
-
-      const matchesCategory =
-        !category || getBookCategory(book) === category;
-
-      const matchesYear =
-        !year || String(getBookYear(book)) === year;
-
-      const available = getAvailableCopies(book) > 0;
-
-      const matchesAvailability =
-        !availability ||
-        (availability === 'available' && available) ||
-        (availability === 'unavailable' && !available);
-
-      return (
-        matchesKeyword &&
-        matchesCategory &&
-        matchesYear &&
-        matchesAvailability
-      );
-    });
-
-    return result.sort((a, b) => {
-      switch (sortBy) {
-        case 'title-desc':
-          return getBookTitle(b).localeCompare(getBookTitle(a), 'vi');
-
-        case 'year-desc':
-          return Number(getBookYear(b) || 0) -
-            Number(getBookYear(a) || 0);
-
-        case 'year-asc':
-          return Number(getBookYear(a) || 0) -
-            Number(getBookYear(b) || 0);
-
-        default:
-          return getBookTitle(a).localeCompare(
-            getBookTitle(b),
-            'vi'
-          );
-      }
-    });
-  }, [books, keyword, category, year, availability, sortBy]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredBooks.length / PAGE_SIZE)
-  );
-
-  const currentPage = Math.min(page, totalPages);
-
-  const paginatedBooks = filteredBooks.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
   const handleSearch = (event) => {
-    event.preventDefault();
+    if (event) event.preventDefault();
 
     const params = new URLSearchParams(searchParams);
     const query = keyword.trim();
@@ -207,6 +211,31 @@ function BookCatalog() {
 
     setSearchParams(params);
     setPage(1);
+  };
+
+  const handleClearKeyword = () => {
+    setKeyword('');
+    const params = new URLSearchParams(searchParams);
+    params.delete('q');
+    setSearchParams(params);
+    setPage(1);
+  };
+
+  const handleCategoryChange = (val) => {
+    setCategory(val);
+    const params = new URLSearchParams(searchParams);
+    if (val) {
+      params.set('category', val);
+    } else {
+      params.delete('category');
+    }
+    setSearchParams(params);
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    window.scrollTo({ top: 350, behavior: 'smooth' });
   };
 
   const resetFilters = () => {
@@ -235,10 +264,6 @@ function BookCatalog() {
 
           <div className="book-catalog__container book-catalog__hero-inner">
             <div className="book-catalog__hero-content">
-              <div className="book-catalog__eyebrow">
-                <span />
-                KHÔNG GIAN TRI THỨC BK LIBRARY
-              </div>
 
               <h1>
                 Tìm cuốn sách
@@ -274,7 +299,7 @@ function BookCatalog() {
                   <button
                     className="book-catalog__clear-search"
                     type="button"
-                    onClick={() => setKeyword('')}
+                    onClick={handleClearKeyword}
                     aria-label="Xóa từ khóa"
                   >
                     ×
@@ -328,11 +353,6 @@ function BookCatalog() {
 
         <section className="book-catalog__content">
           <div className="book-catalog__container">
-            <div className="book-catalog__breadcrumb">
-              <Link to="/">Trang chủ</Link>
-              <span>/</span>
-              <span>Tra cứu sách</span>
-            </div>
 
             <div className="book-catalog__section-heading">
               <div>
@@ -346,7 +366,7 @@ function BookCatalog() {
               </div>
 
               <div className="book-catalog__result-summary">
-                <strong>{loading ? '—' : filteredBooks.length}</strong>
+                <strong>{loading ? '—' : totalBooks}</strong>
                 <span>Kết quả phù hợp</span>
               </div>
             </div>
@@ -370,7 +390,7 @@ function BookCatalog() {
                     id="book-category"
                     value={category}
                     onChange={(event) =>
-                      updateFilter(setCategory, event.target.value)
+                      handleCategoryChange(event.target.value)
                     }
                   >
                     <option value="">Tất cả thể loại</option>
@@ -434,7 +454,7 @@ function BookCatalog() {
                       : (
                         <>
                           Tìm thấy{' '}
-                          <strong>{filteredBooks.length}</strong> cuốn sách
+                          <strong>{totalBooks}</strong> cuốn sách
                         </>
                       )}
                   </p>
@@ -471,7 +491,7 @@ function BookCatalog() {
                       Thử tải lại
                     </button>
                   </div>
-                ) : paginatedBooks.length === 0 ? (
+                ) : books.length === 0 ? (
                   <div className="book-catalog__state">
                     <span className="book-catalog__empty-icon">⌕</span>
                     <h3>Chưa tìm thấy cuốn sách phù hợp</h3>
@@ -488,7 +508,7 @@ function BookCatalog() {
                   </div>
                 ) : (
                   <div className="book-catalog__grid">
-                    {paginatedBooks.map((book, index) => {
+                    {books.map((book, index) => {
                       const id = getBookId(book);
                       const title = getBookTitle(book);
                       const author = getBookAuthor(book);
@@ -534,7 +554,7 @@ function BookCatalog() {
                               <span>{getBookYear(book) || 'Chưa rõ năm'}</span>
                               <span
                                 className={
-                                  available
+                                   available
                                     ? 'book-catalog-card__status is-available'
                                     : 'book-catalog-card__status is-unavailable'
                                 }
@@ -555,7 +575,7 @@ function BookCatalog() {
                               <span>Thông tin sách</span>
                               {id ? (
                                 <Link
-                                  to={`/books/${encodeURIComponent(id)}`}
+                                  to={`/book/${encodeURIComponent(id)}`}
                                   aria-label={`Xem thông tin sách ${title}`}
                                 >
                                   ↗
@@ -573,15 +593,15 @@ function BookCatalog() {
 
                 {!loading &&
                   !error &&
-                  filteredBooks.length > PAGE_SIZE && (
+                  totalPages > 1 && (
                     <nav
                       className="book-catalog__pagination"
                       aria-label="Phân trang"
                     >
                       <button
                         type="button"
-                        disabled={currentPage === 1}
-                        onClick={() => setPage((value) => value - 1)}
+                        disabled={page === 1}
+                        onClick={() => handlePageChange(Math.max(1, page - 1))}
                       >
                         ← Trước
                       </button>
@@ -594,12 +614,12 @@ function BookCatalog() {
                           type="button"
                           key={pageNumber}
                           className={
-                            currentPage === pageNumber ? 'is-active' : ''
+                            page === pageNumber ? 'is-active' : ''
                           }
                           aria-current={
-                            currentPage === pageNumber ? 'page' : undefined
+                            page === pageNumber ? 'page' : undefined
                           }
-                          onClick={() => setPage(pageNumber)}
+                          onClick={() => handlePageChange(pageNumber)}
                         >
                           {pageNumber}
                         </button>
@@ -607,8 +627,8 @@ function BookCatalog() {
 
                       <button
                         type="button"
-                        disabled={currentPage === totalPages}
-                        onClick={() => setPage((value) => value + 1)}
+                        disabled={page === totalPages}
+                        onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
                       >
                         Sau →
                       </button>

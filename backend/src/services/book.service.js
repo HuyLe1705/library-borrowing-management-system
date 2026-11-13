@@ -77,6 +77,11 @@ const bookService = {
                 ? query.category.trim()
                 : '';
 
+        const availability =
+            typeof query.availability === 'string'
+                ? query.availability.trim().toLowerCase()
+                : undefined;
+
         const result = await bookRepository.findAll({
             keyword,
             category: category || undefined,
@@ -84,6 +89,8 @@ const bookService = {
             page,
             size,
             sort: query.sort,
+            order: query.order,
+            availability,
         });
 
         return {

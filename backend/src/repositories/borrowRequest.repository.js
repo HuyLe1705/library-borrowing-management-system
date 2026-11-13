@@ -30,7 +30,7 @@ async function ensureTable(pool) {
         `);
         tableEnsured = true;
     } catch (err) {
-        console.warn('ensureTable dbo.borrow_requests warning:', err.message);
+        throw err;
     }
 }
 

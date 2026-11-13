@@ -1,0 +1,108 @@
+===================================================================================
+HỆ THỐNG QUẢN LÝ MƯỢN TRẢ SÁCH THƯ VIỆN (LIBRARY BORROWING MANAGEMENT SYSTEM)
+DANH SÁCH TÀI KHOẢN KIỂM THỬ TỪNG ROLE (TEST ACCOUNTS BY ROLE)
+===================================================================================
+
+[LƯU Ý ĐĂNG NHẬP]
+- Hệ thống hỗ trợ đăng nhập bằng: Username, Mã người dùng (User Code), hoặc Email.
+- Mật khẩu mặc định cho các tài khoản mẫu trong cơ sở dữ liệu: 123456
+  (Backend cũng chấp nhận: "admin", "password", hoặc chính username/userCode của tài khoản).
+
+-----------------------------------------------------------------------------------
+1. ROLE: ADMIN (QUẢN TRỊ VIÊN HỆ THỐNG)
+-----------------------------------------------------------------------------------
+- Tên đăng nhập (Username) : admin
+- Mã người dùng (User Code): ADMIN01
+- Email                    : admin@library.edu.vn
+- Mật khẩu (Password)      : 123456 (hoặc: admin)
+- Họ và tên (Full Name)    : Quản Trị Hệ Thống
+- Trạng thái (Status)      : ACTIVE (Đang hoạt động)
+- Các chức năng & URL truy cập:
+  + Trang quản trị tổng quan : /admin/dashboard
+  + Quản lý đầu sách (CRUD)  : /admin/books (Thêm mới, sửa, xóa, tìm kiếm sách)
+  + Quản lý lưu thông mượn trả: /admin/circulation
+  + Quản lý người dùng       : /admin/users (Tạo tài khoản, khóa/mở khóa tài khoản)
+  + Nhật ký hoạt động hệ thống: /admin/activity-logs
+  + Duyệt yêu cầu mượn sách  : /admin/requests (Duyệt/từ chối yêu cầu mượn)
+  + Quản lý gia hạn sách     : /admin/renewals (Duyệt gia hạn)
+  + Quản lý tiền phạt        : /admin/fines (Thu tiền phạt quá hạn)
+  + Toàn quyền truy cập cả giao diện Thủ thư (/librarian/*) và Độc giả.
+
+-----------------------------------------------------------------------------------
+2. ROLE: LIBRARIAN (THỦ THƯ)
+-----------------------------------------------------------------------------------
+- Tên đăng nhập (Username) : thuthu
+- Mã người dùng (User Code): TT001
+- Email                    : thuthu@library.edu.vn
+- Mật khẩu (Password)      : 123456 (hoặc: thuthu)
+- Họ và tên (Full Name)    : Nguyễn Thị Thủ Thư
+- Trạng thái (Status)      : ACTIVE (Đang hoạt động)
+- Các chức năng & URL truy cập:
+  + Bàn làm việc thủ thư     : /librarian
+  + Cho mượn sách trực tiếp  : /librarian/borrow (Nhập barcode, mã độc giả để tạo lượt mượn)
+  + Nhận trả sách            : /librarian/return (Xử lý trả sách, tính ngày quá hạn)
+  + Tra cứu sách & bản sao   : /librarian/books
+  + Tra cứu hồ sơ độc giả    : /librarian/readers
+  + Danh sách đang mượn      : /librarian/borrowings
+  + Danh sách yêu cầu mượn   : /librarian/requests (Duyệt / Từ chối yêu cầu đặt trước)
+  + Xử lý yêu cầu gia hạn    : /librarian/renewals
+  + Quản lý phiếu phạt       : /librarian/fines (Ghi nhận phạt, xác nhận thanh toán)
+
+-----------------------------------------------------------------------------------
+3. ROLE: LECTURER (GIẢNG VIÊN)
+-----------------------------------------------------------------------------------
+- Tên đăng nhập (Username) : giangvien
+- Mã người dùng (User Code): GV001
+- Email                    : giangvien@library.edu.vn
+- Mật khẩu (Password)      : 123456 (hoặc: giangvien)
+- Họ và tên (Full Name)    : Trần Văn Giảng Viên
+- Trạng thái (Status)      : ACTIVE (Đang hoạt động)
+- Quyền lợi đặc thù:
+  + Số lượng sách mượn tối đa: 10 cuốn (cao hơn sinh viên)
+  + Thời hạn mượn mặc định   : 30 ngày
+  + Được phép gia hạn sách 1 lần (thêm 14 ngày)
+- Các chức năng & URL truy cập:
+  + Trang chủ & Tra cứu sách : / hoặc /search
+  + Chi tiết sách & Bản sao  : /book/:id (Đặt mượn sách online)
+  + Tủ sách cá nhân của tôi  : /my-books (Theo dõi sách đang mượn, lịch sử, yêu cầu mượn)
+  + Danh mục sách            : /categories
+
+-----------------------------------------------------------------------------------
+4. ROLE: STUDENT (SINH VIÊN) - TÀI KHOẢN HOẠT ĐỘNG
+-----------------------------------------------------------------------------------
+- Tên đăng nhập (Username) : sinhvien1
+- Mã người dùng (User Code): SV001 (Mã số sinh viên)
+- Email                    : nguyenvana@student.edu.vn
+- Mật khẩu (Password)      : 123456 (hoặc: sinhvien1)
+- Họ và tên (Full Name)    : Nguyễn Văn A
+- Trạng thái (Status)      : ACTIVE (Đang hoạt động)
+- Quyền lợi đặc thù:
+  + Số lượng sách mượn tối đa: 5 cuốn
+  + Thời hạn mượn mặc định   : 14 ngày
+  + Được phép gia hạn sách 1 lần (thêm 7 ngày nếu không quá hạn)
+- Các chức năng & URL truy cập:
+  + Trang chủ & Tra cứu sách : / hoặc /search
+  + Xem chi tiết sách        : /book/:id (Gửi yêu cầu mượn sách / giữ chỗ)
+  + Quản lý sách cá nhân     : /my-books (Theo dõi trạng thái sách đang mượn, yêu cầu đặt)
+  + Giới thiệu & Trợ giúp    : /about
+
+-----------------------------------------------------------------------------------
+5. ROLE: STUDENT (SINH VIÊN) - TÀI KHOẢN BỊ KHÓA (DÙNG ĐỂ TEST BẢO MẬT & TRẠNG THÁI)
+-----------------------------------------------------------------------------------
+- Tên đăng nhập (Username) : sinhvien2
+- Mã người dùng (User Code): SV002
+- Email                    : tranthib@student.edu.vn
+- Mật khẩu (Password)      : 123456 (hoặc: sinhvien2)
+- Họ và tên (Full Name)    : Trần Thị B
+- Trạng thái (Status)      : LOCKED (Đã bị khóa do vi phạm hoặc quá hạn lâu ngày)
+- Mục đích test:
+  + Đăng nhập tài khoản này hệ thống sẽ từ chối hoặc chặn không cho mượn sách mới.
+
+===================================================================================
+DANH SÁCH TÀI KHOẢN PHỤ TỪ DATABASE BK_LIBRARY (NẾU SỬ DỤNG SCHEMA GỐC)
+===================================================================================
+- Admin Thư viện     : Username: admin_lib  | Password: admin (hoặc 123456)
+- Thủ thư Chi nhánh  : Username: lib_td     | Password: 123456
+- Bạn đọc Sinh viên  : Username: stu_loan   | Password: 123456
+===================================================================================
+

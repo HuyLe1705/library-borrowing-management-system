@@ -10,9 +10,10 @@ import {
 import { AuthProvider } from './Context/AuthContext';
 
 import Homepage from './Pages/Public/Homepage/hompage';
-import Login from './Component/Auth/Login';
-import Register from './Component/Auth/Register';
-import BookDetail from './Component/Books/BookDetail';
+import Login from './Pages/Auth/Login';
+import Register from './Pages/Auth/Register';
+import BookDetail from './Pages/Public/Book/BookDetail';
+import MyBooks from './Pages/Public/Book/MyBooks';
 import Categories from './Pages/Public/Categories/Categories';
 import About from './Pages/Public/About/About';
 import BookCatalog from './Pages/Public/search/BookCatalog';
@@ -30,6 +31,8 @@ import BookLookup from './Pages/Librarian/BookLookup';
 import ReaderLookup from './Pages/Librarian/ReaderLookup';
 import BorrowingList from './Pages/Librarian/BorrowingList';
 import BorrowRequests from './Pages/Librarian/BorrowRequests';
+import RenewalRequests from './Pages/Librarian/RenewalRequests';
+import Fines from './Pages/Librarian/Fines';
 
 
 import ProtectedRoute from './Component/common/ProtectedRoute';
@@ -49,8 +52,13 @@ function App() {
                             <Route path="/search" element={<BookCatalog />} />
                             <Route path="/categories" element={<Categories />} />
                             <Route path="/about" element={<About />} />
-                            <Route path="/search" element={<BookCatalog />} />
                             <Route path="/book/:id" element={<BookDetail />} />
+                            <Route path="/my-books" element={<MyBooks />} />
+                            {/* Route điều hướng bí danh (Aliases) */}
+                            <Route path="/my-borrowings" element={<Navigate to="/my-books" replace />} />
+                            <Route path="/my-account" element={<Navigate to="/my-books" replace />} />
+                            <Route path="/cart" element={<Navigate to="/search" replace />} />
+                            <Route path="/support" element={<Navigate to="/about" replace />} />
 
                             <Route
                                 path="/admin"
@@ -66,6 +74,9 @@ function App() {
                                 <Route path="circulation" element={<CirculationManagement />} />
                                 <Route path="users" element={<UserManagement />} />
                                 <Route path="activity-logs" element={<ActivityLogs />} />
+                                <Route path="requests" element={<BorrowRequests />} />
+                                <Route path="renewals" element={<RenewalRequests />} />
+                                <Route path="fines" element={<Fines />} />
                             </Route>
 
                             {/* Route không tồn tại */}
@@ -74,7 +85,7 @@ function App() {
                                 element={<Navigate to="/" replace />}
                             />
 
-                            <Route path="/librarian" element={<LibrarianLayout />}>
+                            <Route path="/librarian" element={<ProtectedRoute allowedRoles={[ROLES.LIBRARIAN, ROLES.ADMIN]}><LibrarianLayout /></ProtectedRoute>}>
                                 <Route index element={<LibrarianDashboard />} />
 
                                 <Route path="borrow" element={<BorrowBook />} />
@@ -84,6 +95,8 @@ function App() {
                                 <Route path="readers" element={<ReaderLookup />} />
                                 <Route path="borrowings" element={<BorrowingList />} />
                                 <Route path="requests" element={<BorrowRequests />} />
+                                <Route path="renewals" element={<RenewalRequests />} />
+                                <Route path="fines" element={<Fines />} />
                             </Route>
                         </Routes>
                     </main>

@@ -2,7 +2,7 @@ const { getPool, sql } = require('../config/database');
 
 const bookRepository = {
     // Lấy danh sách sách, tìm kiếm, lọc, phân trang kèm số lượng bản sao sẵn có
-    async findAll({ keyword, category, year, page = 1, size = 10, sort }) {
+    async findAll({ keyword, category, year, page = 1, size = 10, sort, order, availability }) {
         const pool = await getPool();
         const request = pool.request();
         const conditions = [];
@@ -28,6 +28,24 @@ const bookRepository = {
             conditions.push('b.publish_year = @year');
         }
 
+        if (availability === 'available') {
+            conditions.push(`
+                EXISTS (
+                    SELECT 1 FROM dbo.book_copies bc 
+                    WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE'
+                    AND NOT EXISTS (SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id = bc.id AND r.status = 'APPROVED')
+                )
+            `);
+        } else if (availability === 'unavailable') {
+            conditions.push(`
+                NOT EXISTS (
+                    SELECT 1 FROM dbo.book_copies bc 
+                    WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE'
+                    AND NOT EXISTS (SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id = bc.id AND r.status = 'APPROVED')
+                )
+            `);
+        }
+
         const whereClause = conditions.length
             ? `WHERE ${conditions.join(' AND ')}`
             : '';
@@ -37,7 +55,10 @@ const bookRepository = {
             year: 'b.publish_year',
             author: 'b.author',
         };
-        const sortColumn = sortColumns[sort] || 'b.title';
+        const rawSort = String(sort || '').toLowerCase();
+        const sortKey = rawSort.replace(/-(asc|desc)$/, '');
+        const sortDir = rawSort.endsWith('-desc') || String(order || '').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+        const sortColumn = sortColumns[sortKey] || sortColumns[rawSort] || 'b.title';
 
         const safePage = Math.max(1, Number(page) || 1);
         const safeSize = Math.max(1, Number(size) || 10);
@@ -59,11 +80,12 @@ const bookRepository = {
                 b.description,
                 b.cover_url AS coverUrl,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id) AS totalCopies,
-                (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE') AS availableCopies
+                (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE'
+                    AND NOT EXISTS (SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id=bc.id AND r.status='APPROVED')) AS availableCopies
             FROM dbo.books b
             LEFT JOIN dbo.categories c ON c.id = b.category_id
             ${whereClause}
-            ORDER BY ${sortColumn} ASC, b.id ASC
+            ORDER BY ${sortColumn} ${sortDir}, b.id ${sortDir}
             OFFSET @offset ROWS
             FETCH NEXT @size ROWS ONLY;
 
@@ -136,12 +158,13 @@ const bookRepository = {
                 WHERE b.id = @id;
 
                 SELECT
-                    id AS copyId,
+                    bc.id AS copyId,
                     barcode,
                     shelf_location AS shelfLocation,
-                    status,
+                    CASE WHEN bc.status='AVAILABLE' AND EXISTS(SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id=bc.id AND r.status='APPROVED')
+                        THEN 'RESERVED' ELSE bc.status END AS status,
                     entry_date AS entryDate
-                FROM dbo.book_copies
+                FROM dbo.book_copies bc
                 WHERE book_id = @id
                 ORDER BY barcode ASC;
             `);

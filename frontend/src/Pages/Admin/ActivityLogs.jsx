@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import activityLogService from '../../Services/activityLogService';
+import Pagination from '../../Component/common/Pagination';
 import './AdminPages.css';
 
 const PAGE_SIZE = 10;
@@ -411,40 +412,14 @@ function ActivityLogs() {
                 </div>
 
                 {!loading && !error && filteredLogs.length > 0 && (
-                    <div className="activity-pagination">
-                        <span>
-                            Hiển thị{' '}
-                            {(currentPage - 1) * PAGE_SIZE + 1}
-                            {'–'}
-                            {Math.min(
-                                currentPage * PAGE_SIZE,
-                                filteredLogs.length
-                            )}{' '}
-                            trong {filteredLogs.length} bản ghi
-                        </span>
-
-                        <div className="activity-pagination-controls">
-                            <button
-                                type="button"
-                                disabled={currentPage === 1}
-                                onClick={() => setPage((value) => value - 1)}
-                            >
-                                ← Trước
-                            </button>
-
-                            <span>
-                                Trang {currentPage} / {totalPages}
-                            </span>
-
-                            <button
-                                type="button"
-                                disabled={currentPage >= totalPages}
-                                onClick={() => setPage((value) => value + 1)}
-                            >
-                                Sau →
-                            </button>
-                        </div>
-                    </div>
+                    <Pagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        total={filteredLogs.length}
+                        size={PAGE_SIZE}
+                        loading={loading}
+                        onPageChange={setPage}
+                    />
                 )}
             </section>
         </div>

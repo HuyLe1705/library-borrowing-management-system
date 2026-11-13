@@ -21,6 +21,15 @@ const borrowRequestService = {
         if (!book) {
             throw new HttpError(404, 'Không tìm thấy đầu sách với ID này.');
         }
+        const validate = require('../utils/validation');
+        validate.note(payload.note);
+        if (payload.copyId != null) {
+            validate.id(payload.copyId);
+            if (!book.copies?.some(copy => Number(copy.copyId) === Number(payload.copyId) && copy.status === 'AVAILABLE')) {
+                throw new HttpError(409, 'Bản sao không thuộc đầu sách hoặc không sẵn sàng.');
+            }
+        }
+        if (payload.expectedPickupDate) validate.date(payload.expectedPickupDate);
 
         // Lấy thông tin độc giả (Nếu là Thủ thư/Admin tạo hộ thì dùng userCode gửi lên, ngược lại lấy từ currentUser)
         let targetUser = currentUser;
@@ -33,19 +42,12 @@ const borrowRequestService = {
         }
 
         // 2. Kiểm tra vai trò độc giả
-        if (!['STUDENT', 'LECTURER'].includes(targetUser.role) && !['LIBRARIAN', 'ADMIN'].includes(currentUser.role)) {
+        if (!['STUDENT', 'LECTURER'].includes(targetUser.role)) {
             throw new HttpError(400, 'Chỉ Sinh viên hoặc Giảng viên mới được gửi yêu cầu mượn sách.');
         }
 
         // 3. Kiểm tra tính hợp lệ của độc giả qua repository (thẻ khóa, sách quá hạn, tiền phạt, hạn mức)
-        try {
-            if (borrowRequestRepository.checkEligibility) {
-                await borrowRequestRepository.checkEligibility(targetUser.id, targetUser.role);
-            }
-        } catch (err) {
-            if (err instanceof HttpError) throw err;
-            // Bỏ qua lỗi kết nối DB khi mock test
-        }
+        await borrowRequestRepository.checkEligibility(targetUser.id, targetUser.role);
 
         // 4. Kiểm tra độc giả đã mượn hoặc đã gửi yêu cầu cho cùng đầu sách này chưa
         const existingActiveRequest = await borrowRequestRepository.findActiveByUserAndBook(targetUser.id, bookId);
@@ -144,10 +146,10 @@ const borrowRequestService = {
             throw new HttpError(400, `Không thể hủy yêu cầu đang ở trạng thái "${record.status}". Chỉ yêu cầu PENDING mới được hủy.`);
         }
 
-        const updated = await borrowRequestRepository.updateStatus(requestId, {
+        const updated = await require('../repositories/reservation.repository').transition(requestId, {
             status: 'CANCELLED',
             adminNote: 'Hủy bởi người dùng',
-        });
+        }, currentUser);
 
         // Ghi activity log
         await activityLogService.log({
@@ -162,7 +164,10 @@ const borrowRequestService = {
     },
 
     // Thủ thư / Admin phê duyệt hoặc từ chối yêu cầu
-    async updateStatus(id, { status, adminNote, copyId, pickupDeadline }, currentUser) {
+    async updateStatus(id, { status, adminNote, copyId, pickupDeadline } = {}, currentUser) {
+        if (copyId != null) require('../utils/validation').id(copyId);
+        require('../utils/validation').note(adminNote);
+        if (pickupDeadline) require('../utils/validation').date(pickupDeadline);
         const requestId = Number(id);
         if (!Number.isSafeInteger(requestId) || requestId <= 0) {
             throw new HttpError(400, 'ID yêu cầu không hợp lệ.');
@@ -187,12 +192,12 @@ const borrowRequestService = {
             finalPickupDeadline = threeDaysLater.toISOString().split('T')[0];
         }
 
-        const updated = await borrowRequestRepository.updateStatus(requestId, {
+        const updated = await require('../repositories/reservation.repository').transition(requestId, {
             status: normalizedStatus,
             adminNote: adminNote ? String(adminNote).trim() : null,
             copyId: copyId ? Number(copyId) : null,
             pickupDeadline: finalPickupDeadline,
-        });
+        }, currentUser);
 
         // Ghi activity log
         await activityLogService.log({

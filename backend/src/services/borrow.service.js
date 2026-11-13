@@ -42,20 +42,11 @@ const borrowService = {
     },
 
     async returnBook(payload = {}, currentUser = null) {
-        let barcode = payload.barcode?.trim();
+        const barcode = payload.barcode?.trim();
         const librarianCode = payload.librarianCode?.trim() || currentUser?.userCode || 'TT001';
 
-        // Hỗ trợ tìm barcode qua borrowId / id nếu client gọi theo id phiếu mượn (/api/borrows/:id/return)
-        if (!barcode && (payload.borrowId || payload.id)) {
-            const borrowRecord = await borrowRepository.findById(Number(payload.borrowId || payload.id));
-            if (!borrowRecord) {
-                throw new HttpError(404, 'Không tìm thấy phiếu mượn sách.');
-            }
-            barcode = borrowRecord.barcode;
-        }
-
         if (!barcode) {
-            throw new HttpError(400, 'Mã vạch sách (barcode) hoặc mã phiếu mượn là bắt buộc khi trả sách.');
+            throw new HttpError(400, 'Mã vạch sách (barcode) là bắt buộc khi trả sách.');
         }
 
         const result = await borrowRepository.returnBook({ barcode, librarianCode });

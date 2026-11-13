@@ -366,6 +366,8 @@ router.get('/', (req, res) => {
             borrows: '/api/borrows',
             borrowings: '/api/borrowings',
             borrowRequests: '/api/borrow-requests',
+            renewalRequests: '/api/renewal-requests',
+            fines: '/api/fines',
             dashboard: '/api/dashboard',
             activityLogs: '/api/activity-logs',
             users: '/api/users',
@@ -380,6 +382,8 @@ router.use('/categories', categoryRoutes);
 router.use('/borrows', borrowRoutes);
 router.use('/borrowings', borrowRoutes);
 router.use('/borrow-requests', borrowRequestRoutes);
+router.use('/renewal-requests', require('./renewalRequest.routes'));
+router.use('/fines', require('./fine.routes'));
 router.use('/dashboard', dashboardRoutes);
 router.use('/activity-logs', activityLogRoutes);
 router.use('/activities', activityLogRoutes);

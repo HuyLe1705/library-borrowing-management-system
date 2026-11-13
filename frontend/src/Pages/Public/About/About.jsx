@@ -63,10 +63,6 @@ function About() {
 
         <div className="about-container about-hero__inner">
           <div className="about-hero__content">
-            <span className="about-eyebrow">
-              <span className="about-eyebrow__dot" />
-              KHÔNG GIAN TRI THỨC SỐ
-            </span>
 
             <h1>
               Mở ra thế giới
