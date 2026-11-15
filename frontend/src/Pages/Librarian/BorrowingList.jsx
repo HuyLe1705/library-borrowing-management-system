@@ -210,6 +210,9 @@ export default function BorrowingList() {
                 <button
                     type="button"
                     onClick={() => {
+                        setKeyword('');
+                        setAppliedKeyword('');
+                        setStatusFilter('ALL');
                         setPage(1);
                         loadBorrowings();
                     }}
@@ -378,16 +381,16 @@ export default function BorrowingList() {
                             )}
                         </tbody>
                     </table>
-
-                    <Pagination
-                        page={currentPage}
-                        totalPages={totalPages}
-                        total={filteredBorrowings.length}
-                        size={pageSize}
-                        loading={loading}
-                        onPageChange={handlePageChange}
-                    />
                 </div>
+
+                <Pagination
+                    page={currentPage}
+                    totalPages={totalPages}
+                    total={filteredBorrowings.length}
+                    size={pageSize}
+                    loading={loading}
+                    onPageChange={handlePageChange}
+                />
             </div>
         </div>
     );

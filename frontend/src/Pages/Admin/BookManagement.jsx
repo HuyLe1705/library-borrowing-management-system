@@ -23,6 +23,7 @@ function BookManagement() {
     const [books, setBooks] = useState([]);
     const [categories, setCategories] = useState([]);
     const [keyword, setKeyword] = useState('');
+    const [appliedKeyword, setAppliedKeyword] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -36,7 +37,7 @@ function BookManagement() {
         totalPages: 0,
     });
 
-    const loadBooks = useCallback(async (search = keyword, page = 1) => {
+    const loadBooks = useCallback(async (search = '', page = 1) => {
         setLoading(true);
         setError('');
 
@@ -53,16 +54,19 @@ function BookManagement() {
                 ? data
                 : data?.items ?? data?.content ?? data?.books ?? [];
 
-            setBooks(list);
+            const nextPagination = data?.pagination ?? {
+                page,
+                size: pagination.size,
+                total: list.length,
+                totalPages: list.length > 0 ? 1 : 0,
+            };
 
-            setPagination(
-                data?.pagination ?? {
-                    page,
-                    size: pagination.size,
-                    total: list.length,
-                    totalPages: list.length > 0 ? 1 : 0,
-                }
-            );
+            if (list.length === 0 && page > 1 && nextPagination.totalPages > 0) {
+                return loadBooks(search, Math.min(page - 1, nextPagination.totalPages));
+            }
+
+            setBooks(list);
+            setPagination(nextPagination);
         } catch (err) {
             setError(err.message || 'Không thể tải danh sách sách.');
             setBooks([]);
@@ -75,10 +79,10 @@ function BookManagement() {
         } finally {
             setLoading(false);
         }
-    }, [keyword, pagination.size]);
+    }, [pagination.size]);
 
     useEffect(() => {
-        loadBooks();
+        loadBooks('', 1);
     }, [loadBooks]);
 
     useEffect(() => {
@@ -107,7 +111,9 @@ function BookManagement() {
 
     const handleSearchSubmit = (event) => {
         event.preventDefault();
-        loadBooks(keyword, 1);
+        const trimmed = keyword.trim();
+        setAppliedKeyword(trimmed);
+        loadBooks(trimmed, 1);
     };
 
     const updateField = (event) => {
@@ -242,7 +248,7 @@ function BookManagement() {
             setShowForm(false);
             setEditingId(null);
             setForm(emptyBook);
-            await loadBooks(keyword, pagination.page);
+            await loadBooks(appliedKeyword, pagination.page);
         } catch (err) {
             setError(err.message || 'Không thể lưu thông tin sách.');
         } finally {
@@ -261,7 +267,7 @@ function BookManagement() {
 
         try {
             await bookService.deleteBook(book.id);
-            await loadBooks(keyword, pagination.page);
+            await loadBooks(appliedKeyword, pagination.page);
         } catch (err) {
             setError(err.message || 'Không thể xóa sách.');
         }
@@ -292,7 +298,15 @@ function BookManagement() {
                     + Thêm sách
                 </button>
 
-                <button className="admin-secondaryButton" type="button" onClick={() => loadBooks(keyword, 1)}>
+                <button
+                    className="admin-secondaryButton"
+                    type="button"
+                    onClick={() => {
+                        setKeyword('');
+                        setAppliedKeyword('');
+                        loadBooks('', 1);
+                    }}
+                >
                     Làm mới
                 </button>
 
@@ -505,15 +519,15 @@ function BookManagement() {
                         </table>
                     </div>
                 )}
+                <Pagination
+                    page={pagination.page}
+                    totalPages={pagination.totalPages}
+                    total={pagination.total}
+                    size={pagination.size}
+                    loading={loading}
+                    onPageChange={(nextPage) => loadBooks(appliedKeyword, nextPage)}
+                />
             </section>
-            <Pagination
-                page={pagination.page}
-                totalPages={pagination.totalPages}
-                total={pagination.total}
-                size={pagination.size}
-                loading={loading}
-                onPageChange={(nextPage) => loadBooks(keyword, nextPage)}
-            />
         </div>
     );
 }

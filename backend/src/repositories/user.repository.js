@@ -196,8 +196,21 @@ const userRepository = {
         }
 
         if (role) {
-            request.input('role', sql.VarChar, String(role).trim().toUpperCase());
-            conditions.push('u.role = @role');
+            const roles = (Array.isArray(role) ? role : String(role).split(','))
+                .map((r) => String(r).trim().toUpperCase())
+                .filter(Boolean);
+
+            if (roles.length === 1) {
+                request.input('role', sql.VarChar, roles[0]);
+                conditions.push('u.role = @role');
+            } else if (roles.length > 1) {
+                const roleParams = roles.map((r, idx) => {
+                    const paramName = `role_${idx}`;
+                    request.input(paramName, sql.VarChar, r);
+                    return `@${paramName}`;
+                });
+                conditions.push(`u.role IN (${roleParams.join(', ')})`);
+            }
         }
 
         if (status) {

@@ -23,12 +23,23 @@ const userService = {
 
         let role = undefined;
         if (query.role) {
-            let normalizedRole = String(query.role).trim().toUpperCase();
-            if (normalizedRole === 'USER') normalizedRole = 'STUDENT';
-            if (!ALLOWED_ROLES.includes(normalizedRole)) {
-                throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
+            const rawRoles = String(query.role)
+                .split(',')
+                .map((r) => r.trim().toUpperCase())
+                .filter(Boolean)
+                .map((r) => (r === 'USER' ? 'STUDENT' : r));
+
+            for (const r of rawRoles) {
+                if (!ALLOWED_ROLES.includes(r)) {
+                    throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
+                }
             }
-            role = normalizedRole;
+
+            if (rawRoles.length === 1) {
+                role = rawRoles[0];
+            } else if (rawRoles.length > 1) {
+                role = [...new Set(rawRoles)];
+            }
         }
 
         let status = undefined;

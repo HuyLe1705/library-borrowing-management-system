@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getReservations, decideReservation } from '../../Services/circulationService';
+import Pagination from '../../Component/common/Pagination';
 import './CirculationModules.css';
 
+const PAGE_SIZE = 10;
 const labels = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt / chờ nhận', FULFILLED: 'Đã bàn giao', REJECTED: 'Từ chối', CANCELLED: 'Đã hủy' };
 const date = value => value ? new Date(value).toLocaleDateString('vi-VN') : '—';
 export default function BorrowRequests() {
@@ -21,7 +23,17 @@ export default function BorrowRequests() {
     const load = useCallback(async () => {
         const version = ++loadVersion.current;
         setLoading(true); setError('');
-        try { const result = await getReservations({ status, page, size:10 }); if (version !== loadVersion.current) return; setItems(result.items); setPagination(result.pagination); if (page > result.pagination.totalPages) setPage(result.pagination.totalPages); }
+        try {
+            const result = await getReservations({ status, page, size: PAGE_SIZE });
+            if (version !== loadVersion.current) return;
+            const nextTotalPages = Math.max(1, Number(result?.pagination?.totalPages) || 1);
+            setItems(Array.isArray(result?.items) ? result.items : []);
+            setPagination({
+                total: Number(result?.pagination?.total) || 0,
+                totalPages: nextTotalPages,
+            });
+            if (page > nextTotalPages) setPage(nextTotalPages);
+        }
         catch (err) { if (version === loadVersion.current) setError(err.message); }
         finally { if (version === loadVersion.current) setLoading(false); }
     }, [status, page]);
@@ -52,6 +64,13 @@ export default function BorrowRequests() {
                 <td><div className="cm-actions">{actions(item).map(action => <button key={action} disabled={busy || !!selected} onClick={() => { setSelected({ id:item.id, action }); setNote(''); setCopyId(''); setDeadline(''); }}>{actionLabels[action]}</button>)}</div></td>
             </tr>)}
         </tbody></table></div>
-        <div className="cm-pagination"><button disabled={page <= 1 || loading || busy} onClick={() => setPage(page-1)}>Trước</button><span>{page} / {pagination.totalPages}</span><button disabled={page >= pagination.totalPages || loading || busy} onClick={() => setPage(page+1)}>Sau</button></div>
+        <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            size={PAGE_SIZE}
+            loading={loading || busy}
+            onPageChange={setPage}
+        />
     </section>;
 }

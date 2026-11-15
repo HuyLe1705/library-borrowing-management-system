@@ -351,17 +351,18 @@ function CirculationManagement() {
                         </table>
                     </div>
                 )}
+
+                {!loading && filteredBorrowings.length > 0 && (
+                    <Pagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        total={filteredBorrowings.length}
+                        size={pageSize}
+                        loading={loading}
+                        onPageChange={setPage}
+                    />
+                )}
             </section>
-            {!loading && filteredBorrowings.length > 0 && (
-                <Pagination
-                    page={currentPage}
-                    totalPages={totalPages}
-                    total={filteredBorrowings.length}
-                    size={pageSize}
-                    loading={loading}
-                    onPageChange={setPage}
-                />
-            )}
         </div>
     );
 }

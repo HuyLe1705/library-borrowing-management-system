@@ -7,16 +7,50 @@ const PAGE_SIZE = 10;
 
 const ACTION_LABELS = {
     CREATE: 'Tạo mới',
+    CREATE_USER: 'Tạo người dùng',
+    CREATE_FINE: 'Lập phiếu phạt',
+    UPDATE: 'Cập nhật',
+    UPDATE_USER: 'Cập nhật người dùng',
+    CHANGE_ROLE: 'Đổi vai trò',
+    CHANGE_STATUS: 'Đổi trạng thái',
+    DELETE: 'Xóa',
+    DELETE_USER: 'Xóa người dùng',
+    LOGIN: 'Đăng nhập',
+    LOGOUT: 'Đăng xuất',
+    BORROW: 'Mượn sách',
+    BORROW_REQUEST: 'Yêu cầu mượn',
+    RETURN: 'Trả sách',
+    RENEW: 'Gia hạn',
+    RENEWAL_REQUEST: 'Yêu cầu gia hạn',
+    PAY_FINE: 'Thu tiền phạt',
+    APPROVE: 'Phê duyệt',
+    APPROVED_REQUEST: 'Duyệt yêu cầu mượn',
+    APPROVED_RENEWAL: 'Duyệt gia hạn',
+    FULFILLED_REQUEST: 'Bàn giao sách',
+    REJECT: 'Từ chối',
+    REJECTED_REQUEST: 'Từ chối yêu cầu mượn',
+    REJECTED_RENEWAL: 'Từ chối gia hạn',
+    CANCEL_REQUEST: 'Hủy yêu cầu mượn',
+    CANCELLED_REQUEST: 'Hủy yêu cầu mượn',
+    CANCELLED_RENEWAL: 'Hủy gia hạn',
+    LOCK: 'Khóa tài khoản',
+    UNLOCK: 'Mở khóa tài khoản',
+};
+
+const FILTER_ACTION_OPTIONS = {
+    CREATE: 'Tạo mới',
     UPDATE: 'Cập nhật',
     DELETE: 'Xóa',
     LOGIN: 'Đăng nhập',
     LOGOUT: 'Đăng xuất',
     BORROW: 'Mượn sách',
     RETURN: 'Trả sách',
+    RENEW: 'Gia hạn',
+    PAY_FINE: 'Thu tiền phạt',
     APPROVE: 'Phê duyệt',
     REJECT: 'Từ chối',
-    LOCK: 'Khóa tài khoản',
-    UNLOCK: 'Mở khóa tài khoản',
+    CHANGE_ROLE: 'Đổi vai trò',
+    CHANGE_STATUS: 'Đổi trạng thái',
 };
 
 const getActionLabel = (action) => {
@@ -30,15 +64,27 @@ const getActionLabel = (action) => {
 const getActionClass = (action) => {
     const normalized = String(action || '').toUpperCase();
 
-    if (['CREATE', 'LOGIN', 'BORROW', 'APPROVE', 'UNLOCK'].includes(normalized)) {
+    if (
+        ['CREATE', 'LOGIN', 'BORROW', 'APPROVE', 'UNLOCK', 'FULFILLED', 'PAY_FINE'].some(
+            (prefix) => normalized === prefix || normalized.startsWith(prefix)
+        )
+    ) {
         return 'activity-badge-success';
     }
 
-    if (['DELETE', 'REJECT', 'LOCK'].includes(normalized)) {
+    if (
+        ['DELETE', 'REJECT', 'LOCK', 'CANCEL'].some(
+            (prefix) => normalized === prefix || normalized.startsWith(prefix)
+        )
+    ) {
         return 'activity-badge-danger';
     }
 
-    if (['UPDATE', 'RETURN'].includes(normalized)) {
+    if (
+        ['UPDATE', 'RETURN', 'RENEW', 'CHANGE'].some(
+            (prefix) => normalized === prefix || normalized.startsWith(prefix)
+        )
+    ) {
         return 'activity-badge-info';
     }
 
@@ -77,7 +123,9 @@ const getTargetName = (item) =>
     item.resourceName ||
     item.target ||
     item.entity ||
-    '—';
+    (item.targetType
+        ? `${item.targetType}${item.targetId ? ` #${item.targetId}` : ''}`
+        : '—');
 
 const getDescription = (item) =>
     item.description ||
@@ -110,6 +158,8 @@ const normalizeLogs = (response) => {
 
 function ActivityLogs() {
     const [logs, setLogs] = useState([]);
+    const [totalLogsCount, setTotalLogsCount] = useState(0);
+    const [serverPagination, setServerPagination] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [keyword, setKeyword] = useState('');
@@ -118,15 +168,60 @@ function ActivityLogs() {
     const [dateTo, setDateTo] = useState('');
     const [page, setPage] = useState(1);
 
-    const fetchLogs = async () => {
+    const fetchLogs = async (
+        targetPage = page,
+        searchKeyword = keyword,
+        selectedAction = actionFilter,
+        fromDate = dateFrom,
+        toDate = dateTo
+    ) => {
         setLoading(true);
         setError('');
 
         try {
-            const data = await activityLogService.getActivityLogs();
+            const trimmedKeyword = searchKeyword.trim();
+            const actionParam = selectedAction === 'ALL' ? undefined : selectedAction;
 
-            setLogs(normalizeLogs(data));
-            setPage(1);
+            const data = await activityLogService.getActivityLogs({
+                page: targetPage,
+                size: PAGE_SIZE,
+                keyword: trimmedKeyword || undefined,
+                action: actionParam,
+                from: fromDate || undefined,
+                to: toDate || undefined,
+            });
+
+            const list = normalizeLogs(data);
+            setLogs(list);
+
+            const paginationData = (data?.data ?? data)?.pagination;
+            if (paginationData) {
+                const total = Number(paginationData.total ?? list.length);
+                const size = Number(paginationData.size ?? PAGE_SIZE);
+                const totalPages = Math.max(
+                    1,
+                    Number(paginationData.totalPages ?? Math.ceil(total / size))
+                );
+                const resolvedPage = Math.min(Number(paginationData.page ?? targetPage), totalPages);
+
+                setServerPagination({
+                    page: resolvedPage,
+                    size,
+                    total,
+                    totalPages,
+                });
+
+                if (resolvedPage !== targetPage) {
+                    setPage(resolvedPage);
+                }
+
+                if (!trimmedKeyword && !actionParam && !fromDate && !toDate) {
+                    setTotalLogsCount(total);
+                }
+            } else {
+                setServerPagination(null);
+                setTotalLogsCount(list.length);
+            }
         } catch (err) {
             console.error('Lỗi tải nhật ký hoạt động:', err);
 
@@ -139,10 +234,14 @@ function ActivityLogs() {
     };
 
     useEffect(() => {
-        fetchLogs();
-    }, []);
+        fetchLogs(page, keyword, actionFilter, dateFrom, dateTo);
+    }, [page, keyword, actionFilter, dateFrom, dateTo]);
 
     const filteredLogs = useMemo(() => {
+        if (serverPagination) {
+            return logs;
+        }
+
         const search = keyword.trim().toLowerCase();
 
         return logs.filter((item) => {
@@ -160,7 +259,9 @@ function ActivityLogs() {
                 String(item.id ?? '').toLowerCase().includes(search);
 
             const matchesAction =
-                actionFilter === 'ALL' || action === actionFilter;
+                actionFilter === 'ALL' ||
+                action === actionFilter ||
+                action.startsWith(actionFilter);
 
             const timestamp =
                 item.createdAt ||
@@ -189,19 +290,24 @@ function ActivityLogs() {
                 matchesTo
             );
         });
-    }, [logs, keyword, actionFilter, dateFrom, dateTo]);
+    }, [logs, keyword, actionFilter, dateFrom, dateTo, serverPagination]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE));
+    const totalFiltered = serverPagination
+        ? serverPagination.total
+        : filteredLogs.length;
+
+    const totalPages = serverPagination
+        ? serverPagination.totalPages
+        : Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE));
+
     const currentPage = Math.min(page, totalPages);
 
-    const paginatedLogs = filteredLogs.slice(
-        (currentPage - 1) * PAGE_SIZE,
-        currentPage * PAGE_SIZE
-    );
-
-    useEffect(() => {
-        setPage(1);
-    }, [keyword, actionFilter, dateFrom, dateTo]);
+    const paginatedLogs = serverPagination
+        ? logs
+        : filteredLogs.slice(
+              (currentPage - 1) * PAGE_SIZE,
+              currentPage * PAGE_SIZE
+          );
 
     const resetFilters = () => {
         setKeyword('');
@@ -232,7 +338,7 @@ function ActivityLogs() {
                 <button
                     type="button"
                     className="activity-refresh-button"
-                    onClick={fetchLogs}
+                    onClick={() => fetchLogs(page, keyword, actionFilter, dateFrom, dateTo)}
                     disabled={loading}
                 >
                     ↻ {loading ? 'Đang tải...' : 'Làm mới'}
@@ -244,7 +350,7 @@ function ActivityLogs() {
                     <span className="activity-summary-icon">📋</span>
                     <div>
                         <p>Tổng nhật ký</p>
-                        <strong>{logs.length.toLocaleString('vi-VN')}</strong>
+                        <strong>{totalLogsCount.toLocaleString('vi-VN')}</strong>
                     </div>
                 </div>
 
@@ -253,7 +359,7 @@ function ActivityLogs() {
                     <div>
                         <p>Kết quả tìm kiếm</p>
                         <strong>
-                            {filteredLogs.length.toLocaleString('vi-VN')}
+                            {totalFiltered.toLocaleString('vi-VN')}
                         </strong>
                     </div>
                 </div>
@@ -275,7 +381,10 @@ function ActivityLogs() {
                             type="text"
                             placeholder="Tên người dùng, hành động, nội dung..."
                             value={keyword}
-                            onChange={(event) => setKeyword(event.target.value)}
+                            onChange={(event) => {
+                                setKeyword(event.target.value);
+                                setPage(1);
+                            }}
                         />
                     </div>
 
@@ -284,10 +393,13 @@ function ActivityLogs() {
                         <select
                             id="activity-action"
                             value={actionFilter}
-                            onChange={(event) => setActionFilter(event.target.value)}
+                            onChange={(event) => {
+                                setActionFilter(event.target.value);
+                                setPage(1);
+                            }}
                         >
                             <option value="ALL">Tất cả hoạt động</option>
-                            {Object.entries(ACTION_LABELS).map(([value, label]) => (
+                            {Object.entries(FILTER_ACTION_OPTIONS).map(([value, label]) => (
                                 <option key={value} value={value}>
                                     {label}
                                 </option>
@@ -302,7 +414,10 @@ function ActivityLogs() {
                             type="date"
                             value={dateFrom}
                             max={dateTo || undefined}
-                            onChange={(event) => setDateFrom(event.target.value)}
+                            onChange={(event) => {
+                                setDateFrom(event.target.value);
+                                setPage(1);
+                            }}
                         />
                     </div>
 
@@ -313,7 +428,10 @@ function ActivityLogs() {
                             type="date"
                             value={dateTo}
                             min={dateFrom || undefined}
-                            onChange={(event) => setDateTo(event.target.value)}
+                            onChange={(event) => {
+                                setDateTo(event.target.value);
+                                setPage(1);
+                            }}
                         />
                     </div>
 
@@ -329,7 +447,10 @@ function ActivityLogs() {
                 {error && (
                     <div className="activity-error" role="alert">
                         <span>{error}</span>
-                        <button type="button" onClick={fetchLogs}>
+                        <button
+                            type="button"
+                            onClick={() => fetchLogs(page, keyword, actionFilter, dateFrom, dateTo)}
+                        >
                             Thử lại
                         </button>
                     </div>
@@ -411,11 +532,11 @@ function ActivityLogs() {
                     </table>
                 </div>
 
-                {!loading && !error && filteredLogs.length > 0 && (
+                {!loading && !error && totalFiltered > 0 && (
                     <Pagination
                         page={currentPage}
                         totalPages={totalPages}
-                        total={filteredLogs.length}
+                        total={totalFiltered}
                         size={PAGE_SIZE}
                         loading={loading}
                         onPageChange={setPage}

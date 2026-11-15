@@ -10,43 +10,43 @@ function getToken() {
 }
 
 async function fetchReaders(keyword = '', page = 1, size = 10) {
-    const roles = ['STUDENT', 'LECTURER'];
-
-    const results = await Promise.all(
-        roles.map((role) =>
-            getUsers({
-                page,
-                size,
-                keyword: keyword.trim() || undefined,
-                role,
-                sort: 'fullName',
-                order: 'ASC',
-            })
-        )
-    );
-
-    const readerLists = results.map((data) => {
-        if (Array.isArray(data?.items)) return data.items;
-        if (Array.isArray(data?.users)) return data.users;
-        if (Array.isArray(data)) return data;
-        return [];
+    const data = await getUsers({
+        page,
+        size,
+        keyword: keyword.trim() || undefined,
+        role: 'STUDENT,LECTURER',
+        sort: 'fullName',
+        order: 'ASC',
     });
 
-    const allReaders = readerLists.flat();
+    const readers = Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray(data?.users)
+          ? data.users
+          : Array.isArray(data)
+            ? data
+            : [];
+
+    const total = Number(data?.pagination?.total ?? readers.length);
+    const resolvedSize = Number(data?.pagination?.size ?? size);
+    const totalPages = Number(
+        data?.pagination?.totalPages ?? Math.ceil(total / resolvedSize)
+    );
 
     return {
-        readers: allReaders,
+        readers,
         pagination: {
-            page,
-            size,
-            total: allReaders.length,
-            totalPages: Math.ceil(allReaders.length / size),
+            page: Number(data?.pagination?.page ?? page),
+            size: resolvedSize,
+            total,
+            totalPages,
         },
     };
 }
 
 export default function ReaderLookup() {
     const [keyword, setKeyword] = useState('');
+    const [appliedKeyword, setAppliedKeyword] = useState('');
     const [readers, setReaders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -57,7 +57,7 @@ export default function ReaderLookup() {
         totalPages: 0,
     });
 
-    const loadReaders = async (search = keyword, page = 1) => {
+    const loadReaders = async (search = appliedKeyword, page = 1) => {
         try {
             setLoading(true);
             setError('');
@@ -81,12 +81,14 @@ export default function ReaderLookup() {
     };
 
     useEffect(() => {
-        loadReaders();
+        loadReaders('', 1);
     }, []);
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        loadReaders(keyword);
+        const trimmed = keyword.trim();
+        setAppliedKeyword(trimmed);
+        loadReaders(trimmed, 1);
     };
 
     const getReaderStatus = (reader) => {
@@ -126,7 +128,7 @@ export default function ReaderLookup() {
     };
 
     const handlePageChange = (nextPage) => {
-        loadReaders(keyword, nextPage);
+        loadReaders(appliedKeyword, nextPage);
     };
 
     return (
@@ -157,7 +159,8 @@ export default function ReaderLookup() {
                     className="secondary-button"
                     onClick={() => {
                         setKeyword('');
-                        loadReaders('');
+                        setAppliedKeyword('');
+                        loadReaders('', 1);
                     }}
                 >
                     Làm mới
@@ -169,7 +172,7 @@ export default function ReaderLookup() {
             <div className="table-card">
                 <div className="table-header">
                     <h2>Danh sách độc giả</h2>
-                    <span>{readers.length} kết quả</span>
+                    <span>{pagination.total} kết quả</span>
                 </div>
 
                 <div className="table-responsive">
@@ -247,16 +250,16 @@ export default function ReaderLookup() {
                             )}
                         </tbody>
                     </table>
-
-                    <Pagination
-                        page={pagination.page}
-                        totalPages={pagination.totalPages}
-                        total={pagination.total}
-                        size={pagination.size}
-                        loading={loading}
-                        onPageChange={handlePageChange}
-                    />
                 </div>
+
+                <Pagination
+                    page={pagination.page}
+                    totalPages={pagination.totalPages}
+                    total={pagination.total}
+                    size={pagination.size}
+                    loading={loading}
+                    onPageChange={handlePageChange}
+                />
             </div>
         </div>
     );
