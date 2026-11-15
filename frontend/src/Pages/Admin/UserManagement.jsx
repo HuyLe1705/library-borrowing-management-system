@@ -37,40 +37,85 @@ function getRoles(user) {
 
 function UserManagement() {
     const [users, setUsers] = useState([]);
+    const [totalAccounts, setTotalAccounts] = useState(0);
     const [keyword, setKeyword] = useState('');
     const [roleFilter, setRoleFilter] = useState('ALL');
     const [page, setPage] = useState(1);
+    const [serverPagination, setServerPagination] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [savingId, setSavingId] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const loadUsers = useCallback(async () => {
+    const loadUsers = useCallback(async (targetPage = page, searchKeyword = keyword, selectedRole = roleFilter) => {
         setLoading(true);
         setError('');
 
         try {
-            const data = await userService.getUsers();
-            setUsers(getList(data));
+            const trimmedKeyword = searchKeyword.trim();
+            const roleParam = selectedRole === 'ALL' ? undefined : selectedRole;
+
+            const data = await userService.getUsers({
+                page: targetPage,
+                size: PAGE_SIZE,
+                keyword: trimmedKeyword || undefined,
+                role: roleParam,
+            });
+
+            const list = getList(data);
+            setUsers(list);
+
+            if (data?.pagination) {
+                const total = Number(data.pagination.total ?? list.length);
+                const size = Number(data.pagination.size ?? PAGE_SIZE);
+                const totalPages = Math.max(
+                    1,
+                    Number(data.pagination.totalPages ?? Math.ceil(total / size))
+                );
+                const resolvedPage = Math.min(Number(data.pagination.page ?? targetPage), totalPages);
+
+                setServerPagination({
+                    page: resolvedPage,
+                    size,
+                    total,
+                    totalPages,
+                });
+
+                if (resolvedPage !== targetPage) {
+                    setPage(resolvedPage);
+                }
+
+                if (!trimmedKeyword && !roleParam) {
+                    setTotalAccounts(total);
+                }
+            } else {
+                setServerPagination(null);
+                setTotalAccounts(list.length);
+            }
         } catch (err) {
             console.error('Lỗi tải danh sách người dùng:', err);
             setError(err.message || 'Không thể tải danh sách người dùng.');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, keyword, roleFilter]);
 
     useEffect(() => {
-        loadUsers();
-    }, [loadUsers]);
+        loadUsers(page, keyword, roleFilter);
+    }, [loadUsers, page, keyword, roleFilter]);
 
-    // Lọc dữ liệu theo từ khóa và vai trò
+    // Lọc dữ liệu theo từ khóa và vai trò (dùng khi API trả mảng thuần không có server pagination)
     const filteredUsers = useMemo(() => {
+        if (serverPagination) {
+            return users;
+        }
+
         const search = keyword.trim().toLowerCase();
 
         return users.filter((user) => {
             const searchText = [
+                user.userCode,
                 user.fullName,
                 user.name,
                 user.username,
@@ -87,31 +132,33 @@ function UserManagement() {
 
             return matchesKeyword && matchesRole;
         });
-    }, [users, keyword, roleFilter]);
+    }, [users, keyword, roleFilter, serverPagination]);
 
     // Tính toán phân trang
-    const totalPages = Math.max(
-        1,
-        Math.ceil(filteredUsers.length / PAGE_SIZE)
-    );
+    const totalFiltered = serverPagination
+        ? serverPagination.total
+        : filteredUsers.length;
+
+    const totalPages = serverPagination
+        ? serverPagination.totalPages
+        : Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
 
     const currentPage = Math.min(page, totalPages);
 
     const paginatedUsers = useMemo(() => {
+        if (serverPagination) {
+            return users;
+        }
+
         const start = (currentPage - 1) * PAGE_SIZE;
 
         return filteredUsers.slice(start, start + PAGE_SIZE);
-    }, [filteredUsers, currentPage]);
-
-    // Quay về trang đầu khi thay đổi bộ lọc
-    useEffect(() => {
-        setPage(1);
-    }, [keyword, roleFilter]);
+    }, [users, filteredUsers, currentPage, serverPagination]);
 
     const handleRefresh = async () => {
         setPage(1);
         setSuccess('');
-        await loadUsers();
+        await loadUsers(1, keyword, roleFilter);
     };
 
     const updateRole = async (user, newRole) => {
@@ -184,7 +231,7 @@ function UserManagement() {
                     <div className="um-stat-icon um-icon-blue">♙</div>
                     <div className="um-stat-content">
                         <span>Tổng tài khoản</span>
-                        <strong>{users.length.toLocaleString('vi-VN')}</strong>
+                        <strong>{totalAccounts.toLocaleString('vi-VN')}</strong>
                         <small>Tất cả người dùng</small>
                     </div>
                 </article>
@@ -194,7 +241,7 @@ function UserManagement() {
                     <div className="um-stat-content">
                         <span>Kết quả hiện tại</span>
                         <strong>
-                            {filteredUsers.length.toLocaleString('vi-VN')}
+                            {totalFiltered.toLocaleString('vi-VN')}
                         </strong>
                         <small>Theo điều kiện lọc</small>
                     </div>
@@ -246,7 +293,7 @@ function UserManagement() {
                     </div>
 
                     <span className="um-total-badge">
-                        {filteredUsers.length.toLocaleString('vi-VN')} tài khoản
+                        {totalFiltered.toLocaleString('vi-VN')} tài khoản
                     </span>
                 </div>
 
@@ -256,7 +303,10 @@ function UserManagement() {
                         <input
                             type="search"
                             value={keyword}
-                            onChange={(event) => setKeyword(event.target.value)}
+                            onChange={(event) => {
+                                setKeyword(event.target.value);
+                                setPage(1);
+                            }}
                             placeholder="Tìm theo họ tên, username, email..."
                             aria-label="Tìm kiếm người dùng"
                         />
@@ -264,7 +314,10 @@ function UserManagement() {
                         {keyword && (
                             <button
                                 type="button"
-                                onClick={() => setKeyword('')}
+                                onClick={() => {
+                                    setKeyword('');
+                                    setPage(1);
+                                }}
                                 aria-label="Xóa từ khóa"
                             >
                                 ×
@@ -276,15 +329,17 @@ function UserManagement() {
                         <span>Vai trò</span>
                         <select
                             value={roleFilter}
-                            onChange={(event) =>
-                                setRoleFilter(event.target.value)
-                            }
+                            onChange={(event) => {
+                                setRoleFilter(event.target.value);
+                                setPage(1);
+                            }}
                             aria-label="Lọc theo vai trò"
                         >
                             <option value="ALL">Tất cả vai trò</option>
                             <option value="ADMIN">ADMIN</option>
-                            <option value="USER">USER</option>
                             <option value="LIBRARIAN">LIBRARIAN</option>
+                            <option value="LECTURER">LECTURER</option>
+                            <option value="STUDENT">STUDENT</option>
                         </select>
                     </label>
                 </div>
@@ -340,7 +395,7 @@ function UserManagement() {
                                 paginatedUsers.map((user, index) => {
                                     const id = user.id ?? user.userId;
                                     const roles = getRoles(user);
-                                    const selectedRole = roles[0] || 'USER';
+                                    const selectedRole = roles[0] || 'STUDENT';
                                     const displayName =
                                         user.fullName || user.name || 'Chưa cập nhật';
                                     const isSaving = savingId === id;
@@ -409,11 +464,10 @@ function UserManagement() {
                                                         }
                                                         aria-label={`Đổi vai trò cho ${user.username || id}`}
                                                     >
-                                                        <option value="USER">USER</option>
+                                                        <option value="STUDENT">STUDENT</option>
+                                                        <option value="LECTURER">LECTURER</option>
+                                                        <option value="LIBRARIAN">LIBRARIAN</option>
                                                         <option value="ADMIN">ADMIN</option>
-                                                        <option value="LIBRARIAN">
-                                                            LIBRARIAN
-                                                        </option>
                                                     </select>
 
                                                     {isSaving && (
@@ -431,28 +485,15 @@ function UserManagement() {
                     </table>
                 </div>
 
-                {!loading && !error && filteredUsers.length > 0 && (
-                    <div className="um-pagination">
-                        <span className="um-pagination-info">
-                            Hiển thị{' '}
-                            {(currentPage - 1) * PAGE_SIZE + 1}
-                            {'–'}
-                            {Math.min(
-                                currentPage * PAGE_SIZE,
-                                filteredUsers.length
-                            )}{' '}
-                            trong {filteredUsers.length} tài khoản
-                        </span>
-
-                        <Pagination
-                            page={currentPage}
-                            totalPages={totalPages}
-                            total={filteredUsers.length}
-                            size={PAGE_SIZE}
-                            loading={loading}
-                            onPageChange={setPage}
-                        />
-                    </div>
+                {!loading && !error && totalFiltered > 0 && (
+                    <Pagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        total={totalFiltered}
+                        size={PAGE_SIZE}
+                        loading={loading}
+                        onPageChange={setPage}
+                    />
                 )}
             </section>
         </main>

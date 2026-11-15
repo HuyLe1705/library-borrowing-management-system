@@ -23,11 +23,23 @@ const userService = {
 
         let role = undefined;
         if (query.role) {
-            const normalizedRole = String(query.role).trim().toUpperCase();
-            if (!ALLOWED_ROLES.includes(normalizedRole)) {
-                throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
+            const rawRoles = String(query.role)
+                .split(',')
+                .map((r) => r.trim().toUpperCase())
+                .filter(Boolean)
+                .map((r) => (r === 'USER' ? 'STUDENT' : r));
+
+            for (const r of rawRoles) {
+                if (!ALLOWED_ROLES.includes(r)) {
+                    throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
+                }
             }
-            role = normalizedRole;
+
+            if (rawRoles.length === 1) {
+                role = rawRoles[0];
+            } else if (rawRoles.length > 1) {
+                role = [...new Set(rawRoles)];
+            }
         }
 
         let status = undefined;
@@ -102,7 +114,8 @@ const userService = {
 
         let safeRole = 'STUDENT';
         if (role !== undefined && role !== null && String(role).trim() !== '') {
-            const normalizedRole = String(role).trim().toUpperCase();
+            let normalizedRole = String(role).trim().toUpperCase();
+            if (normalizedRole === 'USER') normalizedRole = 'STUDENT';
             if (!ALLOWED_ROLES.includes(normalizedRole)) {
                 throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
             }
@@ -232,7 +245,8 @@ const userService = {
         }
 
         if (payload.role !== undefined) {
-            const normalizedRole = String(payload.role).trim().toUpperCase();
+            let normalizedRole = String(payload.role).trim().toUpperCase();
+            if (normalizedRole === 'USER') normalizedRole = 'STUDENT';
             if (!ALLOWED_ROLES.includes(normalizedRole)) {
                 throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
             }
@@ -279,7 +293,10 @@ const userService = {
             throw new HttpError(400, 'Vai trò mới (role) không được để trống.');
         }
 
-        const normalizedRole = role.trim().toUpperCase();
+        let normalizedRole = role.trim().toUpperCase();
+        if (normalizedRole === 'USER') {
+            normalizedRole = 'STUDENT';
+        }
         if (!ALLOWED_ROLES.includes(normalizedRole)) {
             throw new HttpError(400, `Vai trò người dùng không hợp lệ. Cho phép: ${ALLOWED_ROLES.join(', ')}.`);
         }

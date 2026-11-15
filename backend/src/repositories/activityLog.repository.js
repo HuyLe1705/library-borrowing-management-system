@@ -81,16 +81,30 @@ const activityLogRepository = {
     },
 
     // Lấy danh sách activity logs có phân trang và bộ lọc
-    async findAll({ page = 1, size = 20, action, userCode, targetType, from, to }) {
+    async findAll({ page = 1, size = 20, keyword, action, userCode, targetType, from, to }) {
         const pool = await getPool();
         await ensureTable(pool);
 
         const request = pool.request();
         const conditions = [];
 
-        if (action) {
-            request.input('action', sql.VarChar, action.trim());
-            conditions.push(`action = @action`);
+        if (keyword && String(keyword).trim()) {
+            request.input('keyword', sql.NVarChar, `%${String(keyword).trim()}%`);
+            conditions.push(`(
+                action LIKE @keyword
+                OR user_code LIKE @keyword
+                OR user_name LIKE @keyword
+                OR target_type LIKE @keyword
+                OR details LIKE @keyword
+                OR CAST(id AS VARCHAR(20)) LIKE @keyword
+            )`);
+        }
+
+        if (action && String(action).trim()) {
+            const trimmedAction = String(action).trim().toUpperCase();
+            request.input('action', sql.VarChar, trimmedAction);
+            request.input('actionPrefix', sql.VarChar, `${trimmedAction}%`);
+            conditions.push(`(action = @action OR action LIKE @actionPrefix)`);
         }
 
         if (userCode) {

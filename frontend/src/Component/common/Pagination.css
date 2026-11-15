@@ -39,6 +39,7 @@
     justify-content: center;
 
     min-width: 36px;
+    min-height: 36px;
     height: 36px;
     padding: 0 10px;
 
@@ -144,6 +145,7 @@
 
     .pagination .pagination__button {
         min-width: 34px;
+        min-height: 34px;
         height: 34px;
         padding: 0 8px;
         border-radius: 8px;

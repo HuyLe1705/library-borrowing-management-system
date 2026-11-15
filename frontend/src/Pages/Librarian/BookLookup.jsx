@@ -29,6 +29,7 @@ async function fetchBooks(keyword = '', page = 1, size = 10) {
 
 export default function BookLookup() {
     const [keyword, setKeyword] = useState('');
+    const [appliedKeyword, setAppliedKeyword] = useState('');
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -39,7 +40,7 @@ export default function BookLookup() {
         totalPages: 0,
     });
 
-    async function loadBooks(search = keyword, page = 1) {
+    async function loadBooks(search = appliedKeyword, page = 1) {
         try {
             setLoading(true);
             setError('');
@@ -64,12 +65,14 @@ export default function BookLookup() {
     }
 
     useEffect(() => {
-        loadBooks();
+        loadBooks('', 1);
     }, []);
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        loadBooks(keyword, 1);
+        const trimmed = keyword.trim();
+        setAppliedKeyword(trimmed);
+        loadBooks(trimmed, 1);
     };
 
     const getAvailability = (book) => {
@@ -115,7 +118,8 @@ export default function BookLookup() {
                     className="secondary-button"
                     onClick={() => {
                         setKeyword('');
-                        loadBooks('');
+                        setAppliedKeyword('');
+                        loadBooks('', 1);
                     }}
                 >
                     Làm mới
@@ -231,15 +235,16 @@ export default function BookLookup() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    page={pagination.page}
+                    totalPages={pagination.totalPages}
+                    total={pagination.total}
+                    size={pagination.size}
+                    loading={loading}
+                    onPageChange={(nextPage) => loadBooks(appliedKeyword, nextPage)}
+                />
             </div>
-            <Pagination
-                page={pagination.page}
-                totalPages={pagination.totalPages}
-                total={pagination.total}
-                size={pagination.size}
-                loading={loading}
-                onPageChange={(nextPage) => loadBooks(keyword, nextPage)}
-            />
         </div>
     );
 }

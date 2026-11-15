@@ -40,6 +40,7 @@ const activityLogService = {
         return activityLogRepository.findAll({
             page,
             size,
+            keyword: query.keyword,
             action: query.action,
             userCode: query.userCode,
             targetType: query.targetType,

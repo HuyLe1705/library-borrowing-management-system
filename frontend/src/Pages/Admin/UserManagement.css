@@ -506,10 +506,17 @@
     color: #b42318;
 }
 
-.um-role-user {
+.um-role-user,
+.um-role-student {
     border-color: #bfdbfe;
     background: #eff6ff;
     color: #1d4ed8;
+}
+
+.um-role-lecturer {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #c2410c;
 }
 
 .um-role-librarian {
