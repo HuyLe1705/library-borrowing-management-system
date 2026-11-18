@@ -288,6 +288,10 @@ export default function MyBooks() {
                                         {currentBorrows.map((item, index) => {
                                             const remaining = daysUntil(item.dueDate);
                                             const overdue = String(item.status || '').toUpperCase() === 'OVERDUE' || (remaining !== null && remaining < 0);
+                                            const itemRenewals = renewals.filter(request => Number(request.borrowRecordId) === Number(item.id));
+                                            const pendingRenewal = itemRenewals.find(request => request.status === 'PENDING');
+                                            const approvedRenewal = itemRenewals.find(request => request.status === 'APPROVED');
+                                            const rejectedRenewal = itemRenewals.find(request => request.status === 'REJECTED');
                                             return <tr key={item.id ?? `${item.barcode}-${index}`}>
                                                 <td><strong className="mybooks-book-title">{item.bookTitle || 'Chưa có tên sách'}</strong>{overdue && <small className="mybooks-inline-warning">Quá hạn {Math.abs(remaining ?? 0)} ngày</small>}</td>
                                                 <td><span className="mybooks-code">{item.barcode || '—'}</span></td>
@@ -295,7 +299,20 @@ export default function MyBooks() {
                                                 <td><span className={overdue ? 'mybooks-date mybooks-date--late' : remaining !== null && remaining <= 3 ? 'mybooks-date mybooks-date--soon' : 'mybooks-date'}>{formatDate(item.dueDate)}</span></td>
                                                 <td>{item.shelfLocation || '—'}</td>
                                                 <td><StatusBadge status={overdue ? 'OVERDUE' : item.status} /></td>
-                                                <td>{renewals.some(request => request.borrowRecordId === item.id && request.status === 'PENDING') ? <small>Đang chờ duyệt</small> : !overdue && Number(item.renewalCount || 0) < 1 ? <button className="mybooks-button mybooks-button--light" disabled={sending} onClick={() => { setRenewTarget(item); setRenewNote(''); setSuccess(''); }}>Yêu cầu gia hạn</button> : <small>{overdue ? 'Đã quá hạn' : 'Đã hết lượt'}</small>}</td>
+                                                <td>
+                                                    {pendingRenewal ? (
+                                                        <StatusBadge status="PENDING" request />
+                                                    ) : approvedRenewal || Number(item.renewalCount || 0) >= 1 ? (
+                                                        <StatusBadge status="APPROVED" request />
+                                                    ) : !overdue && Number(item.renewalCount || 0) < 1 ? (
+                                                        <div>
+                                                            {rejectedRenewal && <div style={{ marginBottom: 4 }}><StatusBadge status="REJECTED" request /></div>}
+                                                            <button className="mybooks-button mybooks-button--light" disabled={sending} onClick={() => { setRenewTarget(item); setRenewNote(''); setSuccess(''); setError(''); }}>Yêu cầu gia hạn</button>
+                                                        </div>
+                                                    ) : (
+                                                        <small>{overdue ? 'Đã quá hạn' : 'Đã hết lượt'}</small>
+                                                    )}
+                                                </td>
                                             </tr>;
                                         })}
                                     </tbody></table></div>

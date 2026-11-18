@@ -10,7 +10,7 @@ const date = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : 'â
 export default function RenewalRequests({ reader = false, onChange }) {
     const loadVersion = useRef(0);
     const [items, setItems] = useState([]);
-    const [status, setStatus] = useState(reader ? '' : 'PENDING');
+    const [status, setStatus] = useState('');
     const [userCode, setUserCode] = useState('');
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);

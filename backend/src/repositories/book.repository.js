@@ -14,6 +14,10 @@ const bookRepository = {
                     b.title LIKE @keyword
                     OR b.isbn LIKE @keyword
                     OR b.author LIKE @keyword
+                    OR EXISTS (
+                        SELECT 1 FROM dbo.book_copies bc_kw
+                        WHERE bc_kw.book_id = b.id AND bc_kw.barcode LIKE @keyword
+                    )
                 )
             `);
         }
@@ -79,6 +83,13 @@ const bookRepository = {
                 b.language,
                 b.description,
                 b.cover_url AS coverUrl,
+                COALESCE(
+                    (SELECT TOP 1 bc.barcode FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE'
+                        AND NOT EXISTS (SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id = bc.id AND r.status = 'APPROVED')
+                        ORDER BY bc.barcode ASC),
+                    (SELECT TOP 1 bc.barcode FROM dbo.book_copies bc WHERE bc.book_id = b.id ORDER BY bc.barcode ASC)
+                ) AS barcode,
+                (SELECT STRING_AGG(bc.barcode, ', ') WITHIN GROUP (ORDER BY bc.barcode ASC) FROM dbo.book_copies bc WHERE bc.book_id = b.id) AS barcodes,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id) AS totalCopies,
                 (SELECT COUNT(*) FROM dbo.book_copies bc WHERE bc.book_id = b.id AND bc.status = 'AVAILABLE'
                     AND NOT EXISTS (SELECT 1 FROM dbo.borrow_requests r WHERE r.copy_id=bc.id AND r.status='APPROVED')) AS availableCopies

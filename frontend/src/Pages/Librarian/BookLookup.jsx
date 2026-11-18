@@ -106,7 +106,7 @@ export default function BookLookup() {
                     type="text"
                     value={keyword}
                     onChange={(event) => setKeyword(event.target.value)}
-                    placeholder="Nhập tên sách, mã sách hoặc mã vạch..."
+                    placeholder="Nhập tên sách hoặc mã vạch..."
                 />
 
                 <button type="submit" disabled={loading}>
@@ -138,7 +138,7 @@ export default function BookLookup() {
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>Mã sách</th>
+                                <th>Mã vạch</th>
                                 <th>Tên sách</th>
                                 <th>Tác giả</th>
                                 <th>Thể loại</th>
@@ -178,9 +178,10 @@ export default function BookLookup() {
                                     return (
                                         <tr key={id}>
                                             <td>
-                                                {book.bookCode ??
+                                                {book.barcodes ??
+                                                    book.barcode ??
+                                                    book.bookCode ??
                                                     book.code ??
-                                                    book.id ??
                                                     '—'}
                                             </td>
 

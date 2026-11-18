@@ -9,7 +9,7 @@ const date = value => value ? new Date(value).toLocaleDateString('vi-VN') : '—
 export default function BorrowRequests() {
     const loadVersion = useRef(0);
     const [items, setItems] = useState([]);
-    const [status, setStatus] = useState('PENDING');
+    const [status, setStatus] = useState('');
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState({ total:0, totalPages:1 });
     const [loading, setLoading] = useState(true);

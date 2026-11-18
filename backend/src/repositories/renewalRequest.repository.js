@@ -15,8 +15,8 @@ async function eligible(req, borrowId, user) {
             (status='OVERDUE' OR (status='BORROWED' AND due_date<CAST(SYSDATETIME() AS DATE)))) THEN 1 ELSE 0 END AS overdue,
         CASE WHEN EXISTS(SELECT 1 FROM dbo.fines f JOIN dbo.borrow_records br ON br.id=f.borrow_record_id
             WHERE br.borrower_id=@readerId AND f.status='UNPAID') THEN 1 ELSE 0 END AS debt,
-        CASE WHEN EXISTS(SELECT 1 FROM dbo.borrow_requests r JOIN dbo.book_copies bc ON bc.book_id=r.book_id
-            WHERE bc.id=@copyId AND r.user_id<>@readerId AND r.status IN ('PENDING','APPROVED')) THEN 1 ELSE 0 END AS reserved
+        CASE WHEN EXISTS(SELECT 1 FROM dbo.borrow_requests r
+            WHERE r.copy_id=@copyId AND r.user_id<>@readerId AND r.status='PENDING') THEN 1 ELSE 0 END AS reserved
     `)).recordset[0];
     if (record.readerStatus !== 'ACTIVE' || check.overdue || check.debt) throw new HttpError(403, 'Không thể gia hạn khi bị khóa, có sách quá hạn hoặc nợ phạt.');
     if (record.status !== 'BORROWED' || record.renewal_count >= 1) throw new HttpError(409, 'Chỉ được gia hạn một lần cho sách đang mượn chưa quá hạn.');
