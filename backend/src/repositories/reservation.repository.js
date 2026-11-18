@@ -35,17 +35,20 @@ module.exports.transition = (id, { status, copyId, pickupDeadline, adminNote }, 
                 WHERE r.copy_id=bc.id AND r.status='APPROVED' AND r.id<>@id) ORDER BY bc.id`)).recordset[0];
         if (!copy) throw new HttpError(409, 'Không có bản sao phù hợp sẵn sàng cho mượn.');
         req.input('selectedCopy', sql.Int, copy.id);
+        req.input('days', sql.Int, reader.role === 'LECTURER' ? 30 : 14);
         if (status === 'APPROVED') {
             req.input('deadline', sql.Date, pickupDeadline || null);
             if ((await req.query(`SELECT 1 AS invalid WHERE @deadline<CAST(SYSDATETIME() AS DATE)`)).recordset.length) {
                 throw new HttpError(400, 'Hạn nhận sách không được ở quá khứ.');
             }
             await req.query(`UPDATE dbo.borrow_requests SET copy_id=@selectedCopy,
-                pickup_deadline=COALESCE(@deadline,DATEADD(DAY,3,CAST(SYSDATETIME() AS DATE))) WHERE id=@id`);
+                pickup_deadline=COALESCE(@deadline,DATEADD(DAY,3,CAST(SYSDATETIME() AS DATE))) WHERE id=@id;
+                UPDATE dbo.book_copies SET status='BORROWED' WHERE id=@selectedCopy;
+                INSERT INTO dbo.borrow_records(copy_id,borrower_id,librarian_id,borrow_date,due_date,status)
+                VALUES(@selectedCopy,@borrowerId,@staffId,CAST(SYSDATETIME() AS DATE),DATEADD(DAY,@days,CAST(SYSDATETIME() AS DATE)),'BORROWED')`);
         } else {
             const expired = (await req.query(`SELECT id FROM dbo.borrow_requests WHERE id=@id AND pickup_deadline<CAST(SYSDATETIME() AS DATE)`)).recordset.length;
             if (expired) throw new HttpError(409, 'Đã hết hạn nhận sách. Hãy hủy và tạo yêu cầu mới.');
-            req.input('days', sql.Int, reader.role === 'LECTURER' ? 30 : 14);
             await req.query(`UPDATE dbo.book_copies SET status='BORROWED' WHERE id=@selectedCopy;
                 INSERT INTO dbo.borrow_records(copy_id,borrower_id,librarian_id,borrow_date,due_date,status)
                 VALUES(@selectedCopy,@borrowerId,@staffId,CAST(SYSDATETIME() AS DATE),DATEADD(DAY,@days,CAST(SYSDATETIME() AS DATE)),'BORROWED')`);

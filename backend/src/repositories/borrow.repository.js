@@ -10,8 +10,37 @@ const borrowRepository = {
         const request = pool.request();
         const conditions = [];
 
-        // Tự động cập nhật trạng thái OVERDUE cho các phiếu đã quá hạn trước khi truy vấn
+        // Tự động đồng bộ các yêu cầu đã APPROVED (nhưng chưa tạo phiếu mượn) sang borrow_records và cập nhật OVERDUE
         await pool.request().query(`
+            IF OBJECT_ID('dbo.borrow_requests', 'U') IS NOT NULL
+            BEGIN
+                INSERT INTO dbo.borrow_records (copy_id, borrower_id, librarian_id, borrow_date, due_date, status)
+                SELECT
+                    brq.copy_id,
+                    brq.user_id,
+                    ISNULL((SELECT TOP 1 id FROM dbo.users WHERE role IN ('LIBRARIAN', 'ADMIN') ORDER BY id), brq.user_id),
+                    CAST(ISNULL(brq.updated_at, SYSDATETIME()) AS DATE),
+                    DATEADD(DAY, CASE WHEN u.role = 'LECTURER' THEN 30 ELSE 14 END, CAST(ISNULL(brq.updated_at, SYSDATETIME()) AS DATE)),
+                    'BORROWED'
+                FROM dbo.borrow_requests brq
+                INNER JOIN dbo.users u ON u.id = brq.user_id
+                INNER JOIN dbo.book_copies bc ON bc.id = brq.copy_id
+                WHERE brq.status = 'APPROVED'
+                  AND bc.status = 'AVAILABLE'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM dbo.borrow_records br
+                      WHERE br.copy_id = brq.copy_id
+                        AND br.borrower_id = brq.user_id
+                        AND br.status IN ('BORROWED', 'OVERDUE')
+                  );
+
+                UPDATE bc
+                SET bc.status = 'BORROWED'
+                FROM dbo.book_copies bc
+                INNER JOIN dbo.borrow_requests brq ON brq.copy_id = bc.id
+                WHERE brq.status = 'APPROVED' AND bc.status = 'AVAILABLE';
+            END
+
             UPDATE dbo.borrow_records
             SET status = 'OVERDUE'
             WHERE status = 'BORROWED' AND due_date < CAST(SYSDATETIME() AS DATE);
@@ -338,6 +367,13 @@ const borrowRepository = {
                 UPDATE dbo.book_copies
                 SET status = 'AVAILABLE'
                 WHERE id = @copyId;
+
+                IF OBJECT_ID('dbo.borrow_requests', 'U') IS NOT NULL
+                BEGIN
+                    UPDATE dbo.borrow_requests
+                    SET status = 'FULFILLED', updated_at = SYSDATETIME()
+                    WHERE copy_id = @copyId AND user_id = @borrowerId AND status = 'APPROVED';
+                END
 
                 UPDATE dbo.renewal_requests SET status='CANCELLED', admin_note=N'Sách đã được trả', reviewed_at=SYSDATETIME()
                 WHERE borrow_record_id=@borrowId AND status='PENDING';

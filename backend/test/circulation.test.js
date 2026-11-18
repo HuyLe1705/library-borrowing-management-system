@@ -113,13 +113,13 @@ function reservationQueries({ status='PENDING', available=true, debt=0, expired=
     };
 }
 
-test('approval selects a free copy and commits the reservation without starting a loan', async () => {
+test('approval selects a free copy, commits the reservation, and starts a loan', async () => {
     queryHandler = reservationQueries();
     const result = await reservations.transition(1,{ status:'APPROVED' },staff);
     assert.equal(result.copyId,7); assert.equal(committed,1); assert.equal(rolledBack,0);
     assert.ok(queries.some(q => q.params.selectedCopy === 7));
     assert.ok(queries.some(q => q.sql.includes("r.status='APPROVED' AND r.id<>@id")));
-    assert.ok(!queries.some(q => q.sql.includes('INSERT INTO dbo.borrow_records')));
+    assert.ok(queries.some(q => q.sql.includes('INSERT INTO dbo.borrow_records') && q.params.days === 14));
 });
 
 test('no free copy, ineligible borrower, and repeated approval roll back', async () => {

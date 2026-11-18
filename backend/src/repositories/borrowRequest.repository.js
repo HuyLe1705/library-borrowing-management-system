@@ -67,8 +67,10 @@ const borrowRequestRepository = {
             WHERE br.borrower_id = @borrowerId AND f.status = 'UNPAID';
 
             SELECT COUNT(*) AS pendingRequests
-            FROM dbo.borrow_requests
-            WHERE user_id = @borrowerId AND status IN ('PENDING', 'APPROVED');
+            FROM dbo.borrow_requests r
+            LEFT JOIN dbo.book_copies bc ON bc.id = r.copy_id
+            WHERE r.user_id = @borrowerId
+              AND (r.status = 'PENDING' OR (r.status = 'APPROVED' AND bc.status = 'AVAILABLE'));
         `);
 
         const overdueCount = activeCheck.recordsets[0]?.[0]?.overdueCount || 0;
@@ -136,9 +138,18 @@ const borrowRequestRepository = {
         request.input('bookId', sql.Int, bookId);
 
         const result = await request.query(`
-            SELECT TOP 1 id, status
-            FROM dbo.borrow_requests
-            WHERE user_id = @userId AND book_id = @bookId AND status IN ('PENDING', 'APPROVED');
+            SELECT TOP 1 r.id, r.status
+            FROM dbo.borrow_requests r
+            LEFT JOIN dbo.book_copies bc ON bc.id = r.copy_id
+            WHERE r.user_id = @userId AND r.book_id = @bookId
+              AND (
+                  r.status = 'PENDING'
+                  OR (r.status = 'APPROVED' AND bc.status = 'AVAILABLE')
+                  OR (r.status = 'APPROVED' AND EXISTS (
+                      SELECT 1 FROM dbo.borrow_records br
+                      WHERE br.borrower_id = @userId AND br.copy_id = r.copy_id AND br.status IN ('BORROWED', 'OVERDUE')
+                  ))
+              );
         `);
 
         return result.recordset[0] || null;

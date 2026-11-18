@@ -4,7 +4,7 @@ import Pagination from '../../Component/common/Pagination';
 import './CirculationModules.css';
 
 const PAGE_SIZE = 10;
-const labels = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt / chờ nhận', FULFILLED: 'Đã bàn giao', REJECTED: 'Từ chối', CANCELLED: 'Đã hủy' };
+const labels = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt (Đang mượn)', FULFILLED: 'Đã hoàn tất', REJECTED: 'Từ chối', CANCELLED: 'Đã hủy' };
 const date = value => value ? new Date(value).toLocaleDateString('vi-VN') : '—';
 export default function BorrowRequests() {
     const loadVersion = useRef(0);
@@ -42,14 +42,14 @@ export default function BorrowRequests() {
         event.preventDefault(); setBusy(true); setError(''); setMessage('');
         try {
             await decideReservation(selected.id, selected.action, { adminNote:note, ...(copyId ? { copyId:Number(copyId) } : {}), ...(deadline ? { pickupDeadline:deadline } : {}) });
-            setSelected(null); setMessage('Đã xử lý yêu cầu.'); await load();
+            setSelected(null); setMessage(selected.action === 'approve' ? 'Đã duyệt yêu cầu và tạo phiếu mượn thành công.' : 'Đã xử lý yêu cầu.'); await load();
         } catch (err) { setError(err.message); }
         finally { setBusy(false); }
     };
-    const actions = item => item.status === 'PENDING' ? ['approve','reject'] : item.status === 'APPROVED' ? ['fulfill','cancel'] : [];
+    const actions = item => item.status === 'PENDING' ? ['approve','reject'] : [];
     const actionLabels = { approve:'Duyệt', reject:'Từ chối', fulfill:'Bàn giao sách', cancel:'Hủy giữ sách' };
     return <section className="circulation-module">
-        <div className="cm-heading"><div><h1>Yêu cầu mượn sách</h1><p>Duyệt để giữ bản sao. Bàn giao khi độc giả đến nhận để tạo phiếu mượn.</p></div><button disabled={loading || busy} onClick={load}>Làm mới</button></div>
+        <div className="cm-heading"><div><h1>Yêu cầu mượn sách</h1><p>Duyệt yêu cầu để phân bổ bản sao và tự động tạo phiếu mượn cho độc giả.</p></div><button disabled={loading || busy} onClick={load}>Làm mới</button></div>
         <div className="cm-filters"><label>Trạng thái<select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}><option value="">Tất cả</option>{Object.entries(labels).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label><span>{pagination.total} yêu cầu</span></div>
         {error && <div className="cm-error" role="alert">{error}</div>}{message && <div className="cm-success" role="status">{message}</div>}
         {selected && <form className="cm-decision" onSubmit={submit}><h3>{actionLabels[selected.action]} #{selected.id}</h3>
